@@ -59,7 +59,7 @@ jobs:
           load: true
           tags: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.event.workflow_run.head_sha }}
       - name: Scan with Trivy
-        uses: aquasecurity/trivy-action@v0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.event.workflow_run.head_sha }}
           severity: CRITICAL,HIGH
