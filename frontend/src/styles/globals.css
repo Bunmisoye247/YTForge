@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Tailwind v4 class-based dark mode: toggling `.dark` on <html> (driven by
+   lib/stores/theme-store.ts) flips every `dark:` variant. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-bg: #ffffff;
+  --color-bg-dark: #0a0a0a;
+  --color-surface: #f4f4f5;
+  --color-surface-dark: #18181b;
+  --color-border: #e4e4e7;
+  --color-border-dark: #27272a;
+  --color-text: #18181b;
+  --color-text-dark: #fafafa;
+  --color-text-muted: #71717a;
+  --color-text-muted-dark: #a1a1aa;
+  --color-accent: #0ea5e9;
+  --color-accent-dark: #38bdf8;
+  --color-danger: #dc2626;
+  --color-danger-dark: #f87171;
+  --color-success: #16a34a;
+  --color-success-dark: #4ade80;
+  --color-warning: #d97706;
+  --color-warning-dark: #fbbf24;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.dark body {
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-dark);
+}

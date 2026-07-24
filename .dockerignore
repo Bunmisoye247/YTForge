@@ -1,0 +1,19 @@
+# Build context is the repo root for both backend/Dockerfile(.renderer)
+# and frontend/Dockerfile — one ignore file covers both.
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/htmlcov
+**/.coverage
+backend/tests
+backend/.env
+frontend/node_modules
+frontend/.next
+frontend/tests
+.git
+.env
+*.md
+docs

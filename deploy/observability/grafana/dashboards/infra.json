@@ -1,0 +1,109 @@
+{
+  "uid": "ytforge-infra",
+  "title": "YTForge / Infra",
+  "tags": ["ytforge"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "description": "Scrape-target health and the collector/Temporal self-metrics that are actually wired up in this stack. There is no node_exporter/postgres_exporter/redis_exporter/cAdvisor in deploy/compose/docker-compose.yml yet, so container CPU/memory and Postgres/Redis/MinIO/Qdrant-internal metrics are NOT available here — add those exporters (and matching scrape jobs in prometheus.yml) before treating this as full infra coverage.",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Scrape targets up",
+      "type": "table",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "up",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "OTel Collector: metric points received vs exported",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "otelcol_receiver_accepted_metric_points vs otelcol_exporter_sent_metric_points — a persistent gap between the two indicates the collector is dropping data (backpressure, exporter failures). Metric names per the upstream otelcol-contrib self-telemetry convention as of the last check; verify against a live /metrics scrape.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(otelcol_receiver_accepted_metric_points_total[5m]))",
+          "legendFormat": "received",
+          "refId": "A"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(otelcol_exporter_sent_metric_points_total[5m]))",
+          "legendFormat": "exported",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "title": "Temporal server process uptime",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "description": "Confirms the temporal scrape job is actually reachable. Exact metric name unverified against a live server in this sandbox — see the note on the Pipeline Health dashboard's task-queue-backlog panel.",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "up{job=\"temporal\"}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "YouTube quota remaining, by channel",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 6, "y": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "ytforge_youtube_quota_remaining",
+          "legendFormat": "{{channel_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+app:
+  name: ytforge
+  debug: false
+  cors_origins:
+    - http://localhost:3000
+
+database:
+  host: localhost
+  port: 5432
+  user: ytforge
+  password: ${DATABASE_PASSWORD}
+  name: ytforge
+  pool_size: 10
+  echo: false
+
+security:
+  jwt_secret: ${JWT_SECRET}
+  access_token_ttl_minutes: 15
+  refresh_token_ttl_days: 14
+  encryption_master_key: ${ENCRYPTION_MASTER_KEY}
+
+google_oauth:
+  client_id: "${GOOGLE_OAUTH_CLIENT_ID}"
+  client_secret: "${GOOGLE_OAUTH_CLIENT_SECRET}"
+  redirect_uri: http://localhost:8000/api/v1/auth/google/callback
+
+youtube:
+  upload_quota_cost: 1600
+  daily_quota_budget: 10000
+
+observability:
+  otel_exporter_endpoint: ""
+  service_name: ytforge
+
+models:
+  provider_set: real
+  routes:
+    script_writing: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, ollama/qwen2.5:72b]}
+    fact_checking: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6]}
+    research_summary: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1]}
+    storyboard: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1]}
+    seo: {primary: ollama/llama3.3:70b, fallback: [gemini/gemini-2.0-flash, openai/gpt-4.1]}
+    trend_scoring: {primary: ollama/llama3.3:70b, fallback: [openai/gpt-4.1]}
+    voice_direction: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1]}
+    analytics_insights: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6]}
+    embeddings: {primary: openai/text-embedding-3-large, fallback: [ollama/nomic-embed-text]}
+    image_generation: {primary: flux_api/flux-pro-1.1, fallback: [comfyui/sdxl, a1111/sdxl]}
+    video_generation: {primary: runway/gen3, fallback: [luma/dream-machine, kling/v1]}
+    voice_synthesis: {primary: elevenlabs/eleven_multilingual_v2, fallback: [playht/PlayHT2.0]}
+    music_generation: {primary: suno/v3, fallback: [udio/v1, mubert/v1]}
+  discovery:
+    ollama: {base_url: http://localhost:11434, auto_detect: true}
+    lmstudio: {base_url: http://localhost:1234, auto_detect: true}
+    comfyui: {base_url: http://localhost:8188, auto_detect: true}
+
+qdrant:
+  url: http://localhost:6333
+
+temporal:
+  host: localhost:7233
+  namespace: default
+  task_queue: ytforge-pipeline
+  renderer_task_queue: ytforge-renderer
+
+redis:
+  url: redis://localhost:6379/0
+  events_stream: events
+  events_dlq_stream: "events:dlq"
+  consumer_group: ytforge-consumers
+
+minio:
+  endpoint: localhost:9000
+  secure: false
+  buckets:
+    raw_assets: raw-assets
+    renders: renders
+    thumbnails: thumbnails
+    voices: voices
+    exports: exports
+
+providers:
+  openai: {api_key: "${OPENAI_API_KEY}"}
+  anthropic: {api_key: "${ANTHROPIC_API_KEY}"}
+  gemini: {api_key: "${GEMINI_API_KEY}"}
+  ollama: {base_url: http://localhost:11434}
+  lmstudio: {base_url: http://localhost:1234}
+  flux_api: {api_key: "${FLUX_API_KEY}"}
+  sdxl_diffusers: {base_url: http://localhost:7860}
+  comfyui: {base_url: http://localhost:8188}
+  a1111: {base_url: http://localhost:7861}
+  veo: {api_key: "${VEO_API_KEY}"}
+  runway: {api_key: "${RUNWAY_API_KEY}"}
+  kling: {api_key: "${KLING_API_KEY}"}
+  luma: {api_key: "${LUMA_API_KEY}"}
+  hailuo: {api_key: "${HAILUO_API_KEY}"}
+  elevenlabs: {api_key: "${ELEVENLABS_API_KEY}"}
+  playht: {api_key: "${PLAYHT_API_KEY}"}
+  azure_tts: {api_key: "${AZURE_TTS_API_KEY}"}
+  kokoro: {base_url: http://localhost:8880}
+  piper: {base_url: http://localhost:5000}
+  suno: {api_key: "${SUNO_API_KEY}"}
+  udio: {api_key: "${UDIO_API_KEY}"}
+  mubert: {api_key: "${MUBERT_API_KEY}"}

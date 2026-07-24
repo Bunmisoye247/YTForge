@@ -1,0 +1,14 @@
+# Dashboard PROVIDER config only — points Grafana at
+# `deploy/observability/grafana/dashboards/` for auto-loading. The
+# directory is empty as of Phase 9; Phase 10 drops the actual dashboard
+# JSON files (Pipeline Health, Provider Costs, Channel Performance, Infra
+# per ARCHITECTURE.md §9) in there and they'll be picked up on Grafana's
+# next restart, no provisioning config changes needed.
+apiVersion: 1
+
+providers:
+  - name: ytforge
+    type: file
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards/files

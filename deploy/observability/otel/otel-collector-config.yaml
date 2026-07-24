@@ -1,0 +1,39 @@
+# Minimal working OTel Collector pipeline (Phase 9) — receives OTLP from
+# api/worker/renderer (once Phase 10 adds the OTel SDK there per
+# ARCHITECTURE.md §9), exports metrics to Prometheus (via its own
+# `prometheus` exporter, scraped by prometheus.yml above) and logs/traces
+# to Loki/console. No processors beyond batching — sampling, filtering,
+# and trace-to-metric pipelines are Phase 10 tuning, not this scaffold.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus, debug]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [loki, debug]

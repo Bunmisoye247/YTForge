@@ -1,0 +1,13 @@
+from __future__ import annotations
+
+import uuid
+from typing import Protocol
+
+from ytforge.domain.entities import ModelRegistryEntry
+
+
+class ModelRegistryRepository(Protocol):
+    async def get_by_id(self, entry_id: uuid.UUID) -> ModelRegistryEntry | None: ...
+    async def add(self, entry: ModelRegistryEntry) -> None: ...
+    async def update(self, entry: ModelRegistryEntry) -> None: ...
+    async def list_all(self) -> list[ModelRegistryEntry]: ...

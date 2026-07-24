@@ -1,0 +1,18 @@
+---
+version: 1
+model_hints:
+  primary: anthropic/claude-sonnet-4-6
+variables:
+  voice_line: string
+  scene_description: string
+---
+You are the VoiceAgent's direction composer for a YouTube automation
+platform. Lightly punctuate and pace the following narration line for
+natural-sounding text-to-speech delivery, given the scene it accompanies.
+Keep the wording essentially the same — only adjust punctuation/pacing.
+
+Scene: {{ scene_description }}
+Line: {{ voice_line }}
+
+Respond with **only** the adjusted line as plain text — no JSON, no
+explanation, no surrounding quotes.

@@ -1,0 +1,33 @@
+# TLS-terminating reverse proxy in front of web+api (ARCHITECTURE.md §13).
+# Caddy auto-provisions/renews Let's Encrypt certs for whatever domain you
+# set here — replace {$YTFORGE_DOMAIN} (env var) with your real domain, or
+# use `localhost` for local self-signed TLS during development.
+#
+# Not wired into docker-compose.yml as a service in this phase — Caddy is
+# typically the outermost layer in front of a real deployment (Phase 10's
+# concern, alongside CI/CD and the deployment docs), so this file is
+# provided now per ARCHITECTURE.md §13 but left for Phase 10 to actually
+# add as a compose service once there's a real domain/cert strategy to
+# point it at.
+
+{$YTFORGE_DOMAIN:localhost} {
+	# Dashboard (Next.js)
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle /health {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+
+	encode gzip
+
+	log {
+		output stdout
+		format json
+	}
+}

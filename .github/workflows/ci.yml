@@ -1,0 +1,198 @@
+# ARCHITECTURE.md §12: lint+typecheck -> unit -> integration -> build
+# multi-arch images -> scan -> push to GHCR -> deploy. Backend/frontend
+# jobs are path-filtered so an unrelated change doesn't pay for the other
+# stack's pipeline.
+#
+# NOT exercised end-to-end (no GitHub remote exists for this repo in the
+# sandbox this was written in — see the Deployment section of docs/
+# ARCHITECTURE.md and CLAUDE.md's phase notes). Every action version,
+# command, and env var was checked against each tool's own docs, but treat
+# this file with the same "correct to best available knowledge, unverified
+# end-to-end" honesty ceiling as this project's Docker/compose files, and
+# do a real run (push a branch, open a PR) before trusting it blindly.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'config/**'
+              - 'deploy/compose/**'
+            frontend:
+              - 'frontend/**'
+
+  # --------------------------------------------------------------- backend --
+  backend-lint:
+    name: Backend / lint + typecheck
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --extra dev
+      - name: ruff
+        working-directory: backend
+        run: uv run ruff check src tests
+      - name: mypy
+        working-directory: backend
+        run: uv run mypy src
+      - name: import-linter (Clean Architecture layering)
+        working-directory: backend
+        run: uv run lint-imports
+
+  backend-unit-tests:
+    name: Backend / unit tests
+    needs: backend-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --extra dev
+      - name: pytest (pure unit — no external services)
+        working-directory: backend
+        run: uv run pytest tests/unit tests/performance -m "not integration and not workflow and not db"
+
+  backend-integration-tests:
+    name: Backend / integration tests (testcontainers)
+    needs: backend-unit-tests
+    runs-on: ubuntu-latest
+    # testcontainers spins up its own ephemeral containers against the
+    # runner's preinstalled Docker daemon — no explicit `services:` block
+    # needed, unlike the db/workflow job below.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --extra dev
+      - name: pytest -m integration
+        working-directory: backend
+        run: uv run pytest tests/integration -m integration
+
+  backend-db-workflow-tests:
+    name: Backend / db + workflow tests
+    needs: backend-unit-tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ytforge
+          POSTGRES_PASSWORD: test-password
+          POSTGRES_DB: ytforge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ytforge -d ytforge"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      YTFORGE_APP_ENV: development
+      DATABASE_PASSWORD: test-password
+      JWT_SECRET: test-secret
+      YTFORGE__DATABASE__HOST: localhost
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --extra dev
+      - name: Run migrations
+        working-directory: backend
+        run: uv run ytforge migrate
+      - name: pytest -m "db or workflow"
+        working-directory: backend
+        # workflow tests use Temporal's embedded time-skipping test server,
+        # downloaded on demand by temporalio's test env — not a separate
+        # service container, but does need outbound network access on the
+        # runner.
+        run: uv run pytest tests/db tests/workflows -m "db or workflow"
+
+  # -------------------------------------------------------------- frontend --
+  frontend-lint-typecheck:
+    name: Frontend / lint + typecheck
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - working-directory: frontend
+        run: npm ci
+      - working-directory: frontend
+        run: npm run lint
+      - working-directory: frontend
+        run: npm run typecheck
+
+  frontend-unit-tests:
+    name: Frontend / unit tests
+    needs: frontend-lint-typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - working-directory: frontend
+        run: npm ci
+      - working-directory: frontend
+        run: npm run test
+
+  # CI's job is lint -> unit -> integration -> db/workflow, ending here.
+  # Building, scanning, pushing images, and deploying are deploy.yml's job
+  # (triggered by this workflow's completion on main) — kept separate to
+  # match the three-file split named in docs/PROJECT_STRUCTURE.md
+  # (ci.yml, e2e-nightly.yml, deploy.yml).

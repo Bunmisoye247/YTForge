@@ -1,0 +1,40 @@
+# Auto-provisions the Prometheus + Loki datasources on Grafana startup
+# (Phase 9) — dashboards themselves (Pipeline Health, Provider Costs,
+# Channel Performance, Infra per ARCHITECTURE.md §9) are Phase 10's job;
+# `../dashboards/` is left empty here for that phase to fill in, with a
+# matching provisioning provider ready to pick them up (see dashboards.yml
+# alongside this file).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+
+  # Channel Performance dashboard reads analytics_daily_metrics directly —
+  # that data is DB-resident (ARCHITECTURE §3's analytics_* tables), never
+  # exported as an OTel/Prometheus metric, so a Postgres datasource is the
+  # only way to chart it. Grafana expands ${DATABASE_PASSWORD} from the
+  # container's own env at provisioning time (docker-compose.yml passes it
+  # through to the grafana service) — never written here in plaintext.
+  - name: Postgres
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: ytforge
+    user: ytforge
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+    secureJsonData:
+      password: ${DATABASE_PASSWORD}
+    editable: false

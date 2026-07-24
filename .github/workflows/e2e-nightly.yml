@@ -1,0 +1,111 @@
+# ARCHITECTURE.md §12: "a nightly E2E run executes the full mocked
+# pipeline" — brings up the real `core` compose stack (Postgres, Redis,
+# Temporal, MinIO, etc.) with YTFORGE__MODELS__PROVIDER_SET=fake so every
+# agent runs against fakeprovider (deterministic, no real API keys/cost),
+# then runs backend + frontend e2e suites against that live stack.
+#
+# HONESTY FLAG: as of Phase 10, backend/tests/e2e/ and frontend/tests/e2e/
+# are both empty Phase-6 scaffolds (only .gitkeep — see the e2e row in the
+# original Phase 6 plan's Testing section). This workflow is written to
+# run whatever lands in those directories with NO further changes needed,
+# and degrades to a no-op with a clear log line until real e2e specs are
+# added. Also unexercised end-to-end in this sandbox (no Docker, no GitHub
+# remote) — same ceiling as every other compose/CI file here.
+name: E2E Nightly
+
+on:
+  schedule:
+    - cron: "0 7 * * *" # 07:00 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  e2e:
+    name: Full pipeline against fakeprovider
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_PASSWORD: test-password
+      JWT_SECRET: test-secret
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write .env for the compose stack
+        run: |
+          cat > .env <<EOF
+          DATABASE_PASSWORD=${DATABASE_PASSWORD}
+          JWT_SECRET=${JWT_SECRET}
+          MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+          MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+          YTFORGE__MODELS__PROVIDER_SET=fake
+          EOF
+
+      - name: Bring up core stack (fakeprovider)
+        run: |
+          docker compose -f deploy/compose/docker-compose.yml --profile core up -d --build
+        env:
+          COMPOSE_HTTP_TIMEOUT: "180"
+
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health; then exit 0; fi
+            sleep 5
+          done
+          echo "API never became healthy" >&2
+          docker compose -f deploy/compose/docker-compose.yml --profile core logs
+          exit 1
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend deps (for pytest against the live stack)
+        working-directory: backend
+        run: uv sync --extra dev
+
+      - name: Seed the database
+        working-directory: backend
+        env:
+          YTFORGE__DATABASE__HOST: localhost
+        run: uv run ytforge seed
+
+      - name: Backend e2e tests
+        working-directory: backend
+        env:
+          YTFORGE__DATABASE__HOST: localhost
+        run: |
+          if find tests/e2e -name 'test_*.py' | grep -q .; then
+            uv run pytest tests/e2e
+          else
+            echo "tests/e2e has no test files yet (empty Phase-6 scaffold) — nothing to run."
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend e2e tests
+        working-directory: frontend
+        run: |
+          if find tests/e2e -name '*.spec.ts' | grep -q .; then
+            npm ci
+            npx playwright install --with-deps chromium
+            npm run test:e2e
+          else
+            echo "tests/e2e has no spec files yet (empty Phase-6 scaffold) — nothing to run."
+          fi
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+
+      - name: Compose logs (on failure)
+        if: failure()
+        run: docker compose -f deploy/compose/docker-compose.yml --profile core logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f deploy/compose/docker-compose.yml --profile core down -v

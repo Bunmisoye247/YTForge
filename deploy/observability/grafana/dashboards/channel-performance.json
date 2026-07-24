@@ -1,0 +1,94 @@
+{
+  "uid": "ytforge-channel-performance",
+  "title": "YTForge / Channel Performance",
+  "tags": ["ytforge"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "time": { "from": "now-30d", "to": "now" },
+  "description": "Reads analytics_daily_metrics directly via the Postgres datasource — this data is ingested by AnalyticsCronWorkflow from the real YouTube Analytics API (or fakeprovider canned values) and lives in Postgres, not in the OTel/Prometheus metrics pipeline (see the Postgres datasource note in provisioning/datasources/datasources.yml).",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Views over time, by channel",
+      "type": "timeseries",
+      "datasource": "Postgres",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": "Postgres",
+          "format": "time_series",
+          "rawSql": "SELECT adm.date AS \"time\", c.name AS metric, SUM(adm.views) AS views FROM analytics_daily_metrics adm JOIN videos v ON v.id = adm.video_id JOIN projects p ON p.id = v.project_id JOIN channels c ON c.id = p.channel_id WHERE $__timeFilter(adm.date) GROUP BY adm.date, c.name ORDER BY adm.date",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "title": "Subscribers gained over time, by channel",
+      "type": "timeseries",
+      "datasource": "Postgres",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "datasource": "Postgres",
+          "format": "time_series",
+          "rawSql": "SELECT adm.date AS \"time\", c.name AS metric, SUM(adm.subscribers_gained) AS subscribers_gained FROM analytics_daily_metrics adm JOIN videos v ON v.id = adm.video_id JOIN projects p ON p.id = v.project_id JOIN channels c ON c.id = p.channel_id WHERE $__timeFilter(adm.date) GROUP BY adm.date, c.name ORDER BY adm.date",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "title": "Revenue by channel (selected range)",
+      "type": "bargauge",
+      "datasource": "Postgres",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "targets": [
+        {
+          "datasource": "Postgres",
+          "format": "table",
+          "rawSql": "SELECT c.name AS channel, SUM(adm.revenue_usd) AS revenue_usd FROM analytics_daily_metrics adm JOIN videos v ON v.id = adm.video_id JOIN projects p ON p.id = v.project_id JOIN channels c ON c.id = p.channel_id WHERE $__timeFilter(adm.date) GROUP BY c.name ORDER BY revenue_usd DESC",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2 }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "title": "Top videos (selected range)",
+      "type": "table",
+      "datasource": "Postgres",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "targets": [
+        {
+          "datasource": "Postgres",
+          "format": "table",
+          "rawSql": "SELECT v.title AS video, c.name AS channel, SUM(adm.views) AS views, SUM(adm.likes) AS likes, SUM(adm.revenue_usd) AS revenue_usd FROM analytics_daily_metrics adm JOIN videos v ON v.id = adm.video_id JOIN projects p ON p.id = v.project_id JOIN channels c ON c.id = p.channel_id WHERE $__timeFilter(adm.date) GROUP BY v.title, c.name ORDER BY views DESC LIMIT 20",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "title": "YouTube API quota remaining, by channel",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "The one channel-scoped signal that IS in the metrics pipeline (recorded by PublisherAgent) rather than the analytics DB tables.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "ytforge_youtube_quota_remaining",
+          "legendFormat": "{{channel_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    }
+  ]
+}

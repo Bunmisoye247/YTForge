@@ -1,0 +1,82 @@
+# ARCHITECTURE.md §9 alerting: pipeline failure, DLQ growth, quota
+# near-exhaustion, provider error-rate spikes. Referenced by both
+# prometheus.yml's `rule_files` and docker-compose.yml's prometheus volume
+# mount.
+#
+# NOTE on metric names: these are OTel instrument names
+# (ytforge.pipeline.job.failures etc., defined in
+# backend/src/ytforge/infrastructure/telemetry/{pipeline_metrics,
+# provider_metrics}.py) as they SHOULD appear after the OTel Collector's
+# Prometheus exporter normalizes them (dots -> underscores, `_total` suffix
+# on counters, unit suffix on histograms). This has not been verified
+# against a live collector in this sandbox (no Docker daemon available,
+# consistent with every other infra file in this project) — confirm the
+# exact exported names with `curl otel-collector:8889/metrics` (or
+# whichever port the collector's own prometheus exporter is configured on
+# in otel-collector-config.yaml) before trusting these in production, and
+# adjust the metric names below if they differ.
+
+groups:
+  - name: ytforge_pipeline
+    rules:
+      - alert: YTForgePipelineJobFailure
+        expr: increase(ytforge_pipeline_job_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "A YTForge pipeline job failed"
+          description: >-
+            At least one job has transitioned to FAILED in the last 5
+            minutes (workflow_type={{ $labels.workflow_type }}). Check the
+            Temporal UI and the job's error field for the cause.
+
+      - alert: YTForgeDlqGrowth
+        expr: rate(ytforge_events_dlq_moves_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Events are being moved to the dead-letter stream"
+          description: >-
+            Messages on stream={{ $labels.stream }} have been moving to
+            events:dlq continuously for 5+ minutes — a handler is failing
+            repeatedly. Inspect events:dlq entries for the error field.
+
+      - alert: YTForgeQuotaNearExhaustion
+        # Absolute-units threshold (1600 = one video upload's cost per
+        # CLAUDE.md's hard rules) rather than a percentage, since no
+        # separate "budget total" metric is exported today — only the
+        # remaining-units gauge. Revisit if a budget gauge is added.
+        expr: ytforge_youtube_quota_remaining < 1600
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "YouTube API quota nearly exhausted for a channel"
+          description: >-
+            channel_id={{ $labels.channel_id }} has only
+            {{ $value }} quota units left today — less than the cost of
+            one more upload (1600 units). Further publishes will be
+            blocked until the daily quota resets.
+
+      - alert: YTForgeProviderErrorRateSpike
+        # Error rate as a fraction of call volume, using the duration
+        # histogram's _count series as the total-calls denominator so this
+        # doesn't fire on providers with near-zero traffic.
+        expr: >-
+          (
+            sum by (provider, capability) (rate(ytforge_provider_call_errors_total[5m]))
+            /
+            sum by (provider, capability) (rate(ytforge_provider_call_duration_ms_count[5m]))
+          ) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated error rate calling {{ $labels.provider }}/{{ $labels.capability }}"
+          description: >-
+            Over 20% of calls to provider={{ $labels.provider }}
+            capability={{ $labels.capability }} have failed over the last
+            5 minutes. Check provider status and the structured
+            provider_call logs for error details.

@@ -1,0 +1,133 @@
+{
+  "uid": "ytforge-pipeline-health",
+  "title": "YTForge / Pipeline Health",
+  "tags": ["ytforge"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Job failures (rate, by workflow type)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (workflow_type) (rate(ytforge_pipeline_job_failures_total[5m]))",
+          "legendFormat": "{{workflow_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "title": "DLQ moves (rate, by stream)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (stream) (rate(ytforge_events_dlq_moves_total[5m]))",
+          "legendFormat": "{{stream}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "id": 3,
+      "title": "Provider call error rate (by provider/capability)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (provider, capability) (rate(ytforge_provider_call_errors_total[5m])) / sum by (provider, capability) (rate(ytforge_provider_call_duration_ms_count[5m]))",
+          "legendFormat": "{{provider}}/{{capability}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 }, "overrides": [] }
+    },
+    {
+      "id": 4,
+      "title": "Total job failures (24h)",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(increase(ytforge_pipeline_job_failures_total[24h]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Total DLQ moves (24h)",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(increase(ytforge_events_dlq_moves_total[24h]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Temporal task queue backlog (UNVERIFIED metric name)",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "description": "Placeholder using Temporal server's documented task-queue backlog metric name as of the last time this was checked. Temporal's own metrics naming has changed across server versions — once the `temporal` scrape job (prometheus.yml) is live, run a `curl temporal:9091/metrics` and correct this query's metric name if it doesn't match. Not exercised against a live Temporal server in this sandbox.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (task_queue) (temporal_task_queue_backlog)",
+          "legendFormat": "{{task_queue}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    }
+  ]
+}

@@ -1,0 +1,329 @@
+# YTForge deployment topology (ARCHITECTURE.md §13). Profiles map 1:1 onto
+# the architecture doc's list: core, observability, local-ai, dev.
+#
+# Usage (from this directory):
+#   docker compose --profile core up -d                       # minimal stack
+#   docker compose --profile core --profile dev up -d         # + mailpit
+#   docker compose --profile core --profile observability up -d
+#   docker compose --profile core --profile local-ai up -d    # + ollama (GPU)
+#
+# Requires a `.env` at the repo root (copy `.env.example`) — every service
+# below reads secrets from it via `env_file`, never inlined here.
+#
+# NOTE: built and reviewed without a Docker daemon available in the dev
+# sandbox this was written in — every image tag, healthcheck command, and
+# env var name was checked against each project's own docs, but none of it
+# has been exercised against a live `docker compose up`. Treat this as the
+# same "correct to the best of available documentation, unverified end-to-
+# end" honesty ceiling as this codebase's provider adapters, and do a real
+# `docker compose config` + `up` pass before relying on it.
+
+x-backend-env: &backend-env
+  env_file:
+    - ../../.env
+  environment:
+    YTFORGE_APP_ENV: production
+    YTFORGE__DATABASE__HOST: postgres
+    YTFORGE__DATABASE__PORT: "5432"
+    YTFORGE__DATABASE__USER: ytforge
+    YTFORGE__DATABASE__NAME: ytforge
+    YTFORGE__REDIS__URL: redis://redis:6379/0
+    YTFORGE__QDRANT__URL: http://qdrant:6333
+    YTFORGE__MINIO__ENDPOINT: minio:9000
+    YTFORGE__MINIO__ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+    YTFORGE__MINIO__SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+    YTFORGE__TEMPORAL__HOST: temporal:7233
+    YTFORGE__GOOGLE_OAUTH__REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-http://localhost:8000/api/v1/auth/google/callback}
+    # Empty unless the `observability` profile is also running — matches
+    # the fakeprovider toggle's pattern of an opt-in env var rather than
+    # profile-conditional compose logic (Compose can't easily express
+    # "only set this when a second profile is active").
+    YTFORGE__OBSERVABILITY__OTEL_EXPORTER_ENDPOINT: ${OTEL_EXPORTER_ENDPOINT:-}
+
+x-backend-image: &backend-image
+  build:
+    context: ../..
+    dockerfile: backend/Dockerfile
+
+x-depends-on-infra: &depends-on-infra
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  qdrant:
+    condition: service_started
+  minio:
+    condition: service_healthy
+  temporal:
+    condition: service_started
+
+services:
+  # ---------------------------------------------------------------- core --
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["core"]
+    environment:
+      POSTGRES_USER: ytforge
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ytforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ytforge -d ytforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["core"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    profiles: ["core"]
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"
+    # qdrant's image doesn't bundle curl/wget; this is a best-effort TCP
+    # probe via bash (which the image does include) — verify in a real
+    # environment before depending on it for strict startup ordering.
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    profiles: ["core"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    profiles: ["core"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: ytforge
+      POSTGRES_PWD: ${DATABASE_PASSWORD}
+      POSTGRES_SEEDS: postgres
+      # Temporal server's own Prometheus endpoint — task-queue depth
+      # (ARCHITECTURE.md §9's "queue depths") is server-side state our
+      # application code has no way to compute; this exposes it directly
+      # rather than trying to fake it from the worker side. Only matters
+      # when the `observability` profile is also running.
+      PROMETHEUS_ENDPOINT: 0.0.0.0:9091
+    ports:
+      - "7233:7233"
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    profiles: ["core"]
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+
+  migrate:
+    <<: [*backend-image, *backend-env]
+    profiles: ["core"]
+    command: ["migrate"]
+    depends_on: *depends-on-infra
+    restart: "no"
+
+  api:
+    <<: [*backend-image, *backend-env]
+    profiles: ["core"]
+    command: ["serve", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      <<: *depends-on-infra
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    ports:
+      - "8000:8000"
+
+  worker:
+    <<: [*backend-image, *backend-env]
+    profiles: ["core"]
+    command: ["run-worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      <<: *depends-on-infra
+
+  renderer:
+    <<: *backend-env
+    profiles: ["core"]
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile.renderer
+    command: ["run-renderer"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      <<: *depends-on-infra
+
+  outbox-relay:
+    <<: [*backend-image, *backend-env]
+    profiles: ["core"]
+    command: ["run-relay"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    profiles: ["core"]
+    build:
+      context: ../..
+      dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+
+  # --------------------------------------------------------- observability --
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    profiles: ["observability"]
+    volumes:
+      - ../observability/otel/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["observability"]
+    volumes:
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:latest
+    profiles: ["observability"]
+    volumes:
+      - ../observability/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:latest
+    profiles: ["observability"]
+    volumes:
+      - ../observability/promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: ["-config.file=/etc/promtail/config.yaml"]
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["observability"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      # Only for the Postgres datasource's ${DATABASE_PASSWORD} expansion
+      # in provisioning/datasources/datasources.yml — Grafana never
+      # receives Postgres's own env-file block, just this one var.
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../observability/grafana/dashboards:/etc/grafana/provisioning/dashboards/files:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+    ports:
+      - "3001:3000"
+
+  # ------------------------------------------------------------- local-ai --
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["local-ai"]
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # ComfyUI is also named in ARCHITECTURE.md §13's local-ai profile, but
+    # unlike Ollama it has no official image — only third-party community
+    # builds. Deliberately left out here rather than silently picking one
+    # to trust; add it once you've vetted a specific image (or built your
+    # own Dockerfile against ComfyUI's own repo).
+
+  # -------------------------------------------------------------------dev --
+  # "fakeprovider" (ARCHITECTURE.md §13's dev profile) isn't a separate
+  # container — it's this codebase's existing `YTFORGE__MODELS__
+  # PROVIDER_SET=fake` toggle (see .env.example) applied to the SAME
+  # api/worker/renderer services above via your `.env` file. Uncomment
+  # that line there to run the whole stack against fakeprovider instead
+  # of real credentials.
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: ["dev"]
+    ports:
+      - "8025:8025" # web UI
+      - "1025:1025" # SMTP
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  minio_data:
+  prometheus_data:
+  loki_data:
+  grafana_data:
+  ollama_data:

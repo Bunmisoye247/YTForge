@@ -1,0 +1,102 @@
+[project]
+name = "ytforge"
+version = "0.1.0"
+description = "YTForge — AI YouTube Automation Platform (backend)"
+requires-python = ">=3.12,<3.13"
+readme = "../README.md"
+license = { text = "Proprietary" }
+dependencies = [
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "python-dotenv>=1.0.1",
+    "PyYAML>=6.0.2",
+    "uuid6>=2024.7.10",
+    "cryptography>=43.0.0",
+    "typer>=0.13.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pyjwt>=2.10.0",
+    "python-multipart>=0.0.17",
+    "email-validator>=2.2.0",
+    "httpx>=0.27.0",
+    "jinja2>=3.1.4",
+    "qdrant-client>=1.12.0",
+    "temporalio>=1.30.0",
+    "redis>=5.2.0",
+    "minio>=7.2.0",
+    "opentelemetry-sdk>=1.44.0",
+    "opentelemetry-exporter-otlp>=1.44.0",
+    "opentelemetry-instrumentation-fastapi>=0.65b0",
+]
+
+[project.scripts]
+ytforge = "ytforge.interfaces.cli.main:app"
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7.4",
+    "mypy>=1.13.0",
+    "types-PyYAML>=6.0.12",
+    "pytest>=8.3.3",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "testcontainers[postgres]>=4.8.2",
+    "faker>=30.8.2",
+    "import-linter>=2.1",
+    "respx>=0.21.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ytforge"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ytforge"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["infrastructure/db/migrations/versions"]
+
+[[tool.mypy.overrides]]
+module = "uuid6.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+markers = [
+    "integration: requires Docker (testcontainers)",
+    "workflow: requires a reachable Postgres (Temporal itself is an embedded time-skipping test server, downloaded on demand)",
+    "db: requires a reachable local Postgres (not testcontainers)",
+]
+
+[tool.importlinter]
+root_package = "ytforge"
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture layering"
+type = "layers"
+layers = [
+    "ytforge.interfaces",
+    "ytforge.infrastructure",
+    "ytforge.application",
+    "ytforge.domain",
+]
