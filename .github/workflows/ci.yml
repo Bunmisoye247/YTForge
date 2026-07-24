@@ -132,6 +132,7 @@ jobs:
       YTFORGE_APP_ENV: development
       DATABASE_PASSWORD: test-password
       JWT_SECRET: test-secret
+      ENCRYPTION_MASTER_KEY: "U+ROA6suWq0RrRJIgjLqvfwxVhqMHHS+xaMnzS1sbvA="
       YTFORGE__DATABASE__HOST: localhost
     steps:
       - uses: actions/checkout@v4
