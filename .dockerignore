@@ -16,4 +16,5 @@ frontend/tests
 .git
 .env
 *.md
+!README.md
 docs
