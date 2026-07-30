@@ -4,25 +4,39 @@
    lib/stores/theme-store.ts) flips every `dark:` variant. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* "Forge" palette — warm amber accent against a workshop-dark surface,
+   with a light equivalent derived from the same hues for contrast rather
+   than a generic inverted grayscale. --color-surface-2 is the next step
+   up from --color-surface (nav hover states, table headers, chip
+   backgrounds) — page bg < surface < surface-2 in visual weight. */
 @theme {
-  --color-bg: #ffffff;
-  --color-bg-dark: #0a0a0a;
-  --color-surface: #f4f4f5;
-  --color-surface-dark: #18181b;
-  --color-border: #e4e4e7;
-  --color-border-dark: #27272a;
-  --color-text: #18181b;
-  --color-text-dark: #fafafa;
-  --color-text-muted: #71717a;
-  --color-text-muted-dark: #a1a1aa;
-  --color-accent: #0ea5e9;
-  --color-accent-dark: #38bdf8;
-  --color-danger: #dc2626;
-  --color-danger-dark: #f87171;
-  --color-success: #16a34a;
-  --color-success-dark: #4ade80;
-  --color-warning: #d97706;
-  --color-warning-dark: #fbbf24;
+  --color-bg: #faf9f6;
+  --color-bg-dark: #0f1317;
+  --color-surface: #f2efe8;
+  --color-surface-dark: #161c22;
+  --color-surface-2: #e9e4d8;
+  --color-surface-2-dark: #1d252d;
+  --color-border: #e2ddcf;
+  --color-border-dark: #263039;
+  --color-text: #1b1b18;
+  --color-text-dark: #e9eef3;
+  --color-text-muted: #6e6a5e;
+  --color-text-muted-dark: #8794a1;
+  --color-accent: #b5691c;
+  --color-accent-dark: #f0a33f;
+  --color-accent-ink: #17110a;
+  --color-danger: #c1413a;
+  --color-danger-dark: #e0574f;
+  --color-success: #1e8f5e;
+  --color-success-dark: #46c08a;
+  --color-warning: #b5691c;
+  --color-warning-dark: #f0a33f;
+  --color-info: #2568c9;
+  --color-info-dark: #5ba8f5;
+
+  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
 html,
@@ -33,9 +47,17 @@ body {
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+  font-family: var(--font-body);
 }
 
 .dark body {
   background-color: var(--color-bg-dark);
   color: var(--color-text-dark);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }

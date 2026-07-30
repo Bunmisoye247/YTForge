@@ -34,7 +34,7 @@ export default function ProjectsPage() {
   const toast = useToast();
 
   if (!channelId) {
-    return <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Select a channel to see its projects.</p>;
+    return <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Select a channel to see its projects.</p>;
   }
 
   const handleCreate = () => {
@@ -88,7 +88,7 @@ export default function ProjectsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Projects</h1>
+        <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Projects</h1>
         <Button onClick={() => setOpen(true)}>New project</Button>
       </div>
 

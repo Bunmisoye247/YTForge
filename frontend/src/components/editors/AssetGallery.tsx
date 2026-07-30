@@ -55,9 +55,9 @@ export function AssetGallery({ projectId, types }: Props) {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>
       ) : assets.length === 0 ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">No assets yet.</p>
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">No assets yet.</p>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {assets.map((asset) => (
@@ -122,10 +122,10 @@ function AssetCard({
   return (
     <Card>
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-medium text-[--color-text] dark:text-[--color-text-dark]">{asset.asset_type}</span>
+        <span className="text-sm font-medium text-(--color-text) dark:text-(--color-text-dark)">{asset.asset_type}</span>
         <StatusBadge status={asset.status} />
       </div>
-      <p className="mb-3 truncate text-xs text-[--color-text-muted] dark:text-[--color-text-muted-dark]" title={asset.object_key}>
+      <p className="mb-3 truncate text-xs text-(--color-text-muted) dark:text-(--color-text-muted-dark)" title={asset.object_key}>
         {asset.bucket}/{asset.object_key}
       </p>
       <div className="flex flex-wrap gap-2">

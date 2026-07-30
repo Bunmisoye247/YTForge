@@ -16,7 +16,7 @@ export function Toaster() {
           onClick={() => dismiss(toast.id)}
           className={cn(
             "rounded-md px-4 py-2 text-left text-sm text-white shadow-lg",
-            toast.tone === "success" ? "bg-[--color-success]" : "bg-[--color-danger]",
+            toast.tone === "success" ? "bg-(--color-success)" : "bg-(--color-danger)",
           )}
         >
           {toast.message}

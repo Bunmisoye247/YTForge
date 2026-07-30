@@ -36,16 +36,16 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-lg border border-[--color-border] bg-[--color-bg] p-5 shadow-xl dark:border-[--color-border-dark] dark:bg-[--color-surface-dark]",
+          "relative z-10 w-full max-w-lg rounded-xl border border-(--color-border) bg-(--color-surface) p-5 shadow-xl dark:border-(--color-border-dark) dark:bg-(--color-surface-dark)",
           className,
         )}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[--color-text] dark:text-[--color-text-dark]">{title}</h2>
+          <h2 className="font-display text-base font-semibold text-(--color-text) dark:text-(--color-text-dark)">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-[--color-text-muted] hover:text-[--color-text] dark:text-[--color-text-muted-dark] dark:hover:text-[--color-text-dark]"
+            className="text-(--color-text-muted) hover:text-(--color-text) dark:text-(--color-text-muted-dark) dark:hover:text-(--color-text-dark)"
           >
             ✕
           </button>

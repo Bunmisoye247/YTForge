@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useSelectionStore } from "@/lib/stores/selection-store";
 import { useRequestPublishApproval, useSeoMetadata, useSetSeoMetadata, useUpdateVideo, useVideos } from "@/lib/hooks/use-videos";
 import { useToast } from "@/lib/stores/toast-store";
-import { ProjectPicker } from "@/components/layout/ProjectPicker";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -20,8 +19,8 @@ function SeoEditor({ videoId }: { videoId: string }) {
   const [description, setDescription] = useState(seo?.description ?? "");
 
   return (
-    <div className="mt-3 flex flex-col gap-2 border-t border-[--color-border] pt-3 dark:border-[--color-border-dark]">
-      <div className="text-xs font-medium text-[--color-text-muted] dark:text-[--color-text-muted-dark]">SEO metadata</div>
+    <div className="mt-3 flex flex-col gap-2 border-t border-(--color-border) pt-3 dark:border-(--color-border-dark)">
+      <div className="text-xs font-medium text-(--color-text-muted) dark:text-(--color-text-muted-dark)">SEO metadata</div>
       <Input
         placeholder="SEO title"
         value={title || seo?.title || ""}
@@ -104,8 +103,8 @@ function UploadCard({ video, projectId }: { video: VideoRead; projectId: string 
         </>
       ) : (
         <div>
-          <div className="font-medium text-[--color-text] dark:text-[--color-text-dark]">{video.title}</div>
-          <div className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">{video.description}</div>
+          <div className="font-medium text-(--color-text) dark:text-(--color-text-dark)">{video.title}</div>
+          <div className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">{video.description}</div>
         </div>
       )}
 
@@ -127,23 +126,20 @@ export default function UploadsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Uploads</h1>
-        <ProjectPicker />
-      </div>
+      <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Uploads</h1>
 
       {!projectId ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Select a project.</p>
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Select a project.</p>
       ) : (
         <>
-          <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+          <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
             The actual YouTube upload is Phase 8 — this manages draft videos and requests the
             publish approval that a later phase will act on.
           </p>
           {isLoading ? (
-            <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>
+            <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>
           ) : uploadCandidates.length === 0 ? (
-            <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">No draft or scheduled videos.</p>
+            <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">No draft or scheduled videos.</p>
           ) : (
             <div className="flex flex-col gap-4">
               {uploadCandidates.map((video) => (

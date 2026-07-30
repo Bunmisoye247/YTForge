@@ -12,9 +12,9 @@ export function SceneTimeline({ storyboardId }: { storyboardId: string }) {
   const { data: scenes, isLoading } = useScenes(storyboardId);
   const reorder = useReorderScenes(storyboardId);
 
-  if (isLoading) return <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>;
   if (!scenes || scenes.length === 0) {
-    return <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">No scenes yet.</p>;
+    return <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">No scenes yet.</p>;
   }
 
   const move = (index: number, direction: -1 | 1) => {
@@ -30,12 +30,12 @@ export function SceneTimeline({ storyboardId }: { storyboardId: string }) {
       {scenes.map((scene, index) => (
         <Card key={scene.id} className="flex items-start justify-between gap-4">
           <div>
-            <div className="mb-1 text-xs font-medium text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+            <div className="mb-1 text-xs font-medium text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
               Scene {index + 1} · {formatDuration(scene.duration_seconds)}
             </div>
-            <p className="text-sm text-[--color-text] dark:text-[--color-text-dark]">{scene.description}</p>
+            <p className="text-sm text-(--color-text) dark:text-(--color-text-dark)">{scene.description}</p>
             {scene.voice_line && (
-              <p className="mt-1 text-sm italic text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+              <p className="mt-1 text-sm italic text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
                 &ldquo;{scene.voice_line}&rdquo;
               </p>
             )}

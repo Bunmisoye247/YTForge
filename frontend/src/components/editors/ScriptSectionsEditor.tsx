@@ -55,7 +55,7 @@ export function ScriptSectionsEditor({ initialSections, onSave, isSaving }: Prop
   return (
     <div className="flex flex-col gap-4">
       {sections.map((section, index) => (
-        <div key={index} className="rounded-md border border-[--color-border] p-3 dark:border-[--color-border-dark]">
+        <div key={index} className="rounded-md border border-(--color-border) p-3 dark:border-(--color-border-dark)">
           <div className="mb-2 flex items-center gap-2">
             <Label htmlFor={`section-key-${index}`} className="mb-0 shrink-0">
               Name

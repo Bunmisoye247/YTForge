@@ -5,7 +5,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-[--color-border] bg-[--color-bg] p-4 dark:border-[--color-border-dark] dark:bg-[--color-surface-dark]",
+        "rounded-xl border border-(--color-border) bg-(--color-surface) p-5 dark:border-(--color-border-dark) dark:bg-(--color-surface-dark)",
         className,
       )}
       {...props}
@@ -14,9 +14,17 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("mb-3 flex items-center justify-between", className)} {...props} />;
+  return <div className={cn("mb-4 flex items-center gap-2", className)} {...props} />;
 }
 
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn("text-sm font-semibold text-[--color-text-muted] dark:text-[--color-text-muted-dark]", className)} {...props} />;
+  return (
+    <h3
+      className={cn(
+        "font-display text-[15px] font-semibold text-(--color-text) dark:text-(--color-text-dark)",
+        className,
+      )}
+      {...props}
+    />
+  );
 }

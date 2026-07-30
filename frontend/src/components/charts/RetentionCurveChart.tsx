@@ -9,7 +9,7 @@ export function RetentionCurveChart({ points }: { points: RetentionPointRead[] }
 
   if (points.length === 0) {
     return (
-      <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+      <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
         No retention data yet.
       </p>
     );

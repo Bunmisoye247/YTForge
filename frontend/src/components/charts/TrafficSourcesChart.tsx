@@ -15,7 +15,7 @@ export function TrafficSourcesChart({ sources }: { sources: TrafficSourceRead[] 
 
   if (sources.length === 0) {
     return (
-      <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+      <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
         No traffic source data yet.
       </p>
     );

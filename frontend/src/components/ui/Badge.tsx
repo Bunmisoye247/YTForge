@@ -6,27 +6,35 @@ type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 
 const toneClasses: Record<Tone, string> = {
   neutral:
-    "bg-[--color-surface] text-[--color-text-muted] dark:bg-[--color-surface-dark] dark:text-[--color-text-muted-dark]",
-  info: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
-  success: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
-  warning: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  danger: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+    "bg-(--color-surface-2) text-(--color-text-muted) dark:bg-(--color-surface-2-dark) dark:text-(--color-text-muted-dark)",
+  info: "bg-(--color-info)/12 text-(--color-info) dark:bg-(--color-info-dark)/15 dark:text-(--color-info-dark)",
+  success:
+    "bg-(--color-success)/12 text-(--color-success) dark:bg-(--color-success-dark)/15 dark:text-(--color-success-dark)",
+  warning:
+    "bg-(--color-warning)/12 text-(--color-warning) dark:bg-(--color-warning-dark)/15 dark:text-(--color-warning-dark)",
+  danger:
+    "bg-(--color-danger)/12 text-(--color-danger) dark:bg-(--color-danger-dark)/15 dark:text-(--color-danger-dark)",
 };
 
 export function Badge({
   tone = "neutral",
+  pulse = false,
   className,
+  children,
   ...props
-}: HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) {
+}: HTMLAttributes<HTMLSpanElement> & { tone?: Tone; pulse?: boolean }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold",
         toneClasses[tone],
         className,
       )}
       {...props}
-    />
+    >
+      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full bg-current", pulse && "animate-pulse")} />
+      {children}
+    </span>
   );
 }
 
@@ -69,5 +77,9 @@ function statusTone(value: string): Tone {
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  return <Badge tone={statusTone(status)}>{titleCase(status)}</Badge>;
+  return (
+    <Badge tone={statusTone(status)} pulse={status === "running"}>
+      {titleCase(status)}
+    </Badge>
+  );
 }

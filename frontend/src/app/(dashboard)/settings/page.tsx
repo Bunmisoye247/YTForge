@@ -23,14 +23,14 @@ function EffectiveSettingsCard() {
         <CardTitle>Effective configuration</CardTitle>
       </CardHeader>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <dt className="text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Environment</dt>
-        <dd className="text-[--color-text] dark:text-[--color-text-dark]">{data.app.env}</dd>
-        <dt className="text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Debug</dt>
-        <dd className="text-[--color-text] dark:text-[--color-text-dark]">{String(data.app.debug)}</dd>
-        <dt className="text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Database host</dt>
-        <dd className="text-[--color-text] dark:text-[--color-text-dark]">{data.database.host}:{data.database.port}</dd>
-        <dt className="text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Access token TTL</dt>
-        <dd className="text-[--color-text] dark:text-[--color-text-dark]">{data.security.access_token_ttl_minutes} min</dd>
+        <dt className="text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Environment</dt>
+        <dd className="text-(--color-text) dark:text-(--color-text-dark)">{data.app.env}</dd>
+        <dt className="text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Debug</dt>
+        <dd className="text-(--color-text) dark:text-(--color-text-dark)">{String(data.app.debug)}</dd>
+        <dt className="text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Database host</dt>
+        <dd className="text-(--color-text) dark:text-(--color-text-dark)">{data.database.host}:{data.database.port}</dd>
+        <dt className="text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Access token TTL</dt>
+        <dd className="text-(--color-text) dark:text-(--color-text-dark)">{data.security.access_token_ttl_minutes} min</dd>
       </dl>
     </Card>
   );
@@ -51,18 +51,18 @@ function ModelRegistryCard() {
     <Card>
       <CardHeader>
         <CardTitle>Model registry</CardTitle>
-        <Button size="sm" onClick={() => setOpen(true)}>
+        <Button className="ml-auto" size="sm" onClick={() => setOpen(true)}>
           Register model
         </Button>
       </CardHeader>
       {isLoading ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>
       ) : (
         <div className="flex flex-col gap-2">
           {models?.map((m) => (
             <div key={m.id} className="flex items-center justify-between text-sm">
-              <span className="text-[--color-text] dark:text-[--color-text-dark]">
-                {m.provider}/{m.model_name} <span className="text-[--color-text-muted] dark:text-[--color-text-muted-dark]">({m.capability})</span>
+              <span className="text-(--color-text) dark:text-(--color-text-dark)">
+                {m.provider}/{m.model_name} <span className="text-(--color-text-muted) dark:text-(--color-text-muted-dark)">({m.capability})</span>
               </span>
               <button
                 onClick={() =>
@@ -82,7 +82,7 @@ function ModelRegistryCard() {
             </div>
           ))}
           {models?.length === 0 && (
-            <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">No models registered yet.</p>
+            <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">No models registered yet.</p>
           )}
         </div>
       )}
@@ -143,16 +143,16 @@ function PromptTemplatesCard() {
         <CardTitle>Prompt templates</CardTitle>
       </CardHeader>
       {isLoading ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>
       ) : (
         <div className="mb-4 flex flex-col gap-1">
           {templates?.map((t) => (
-            <div key={t.id} className="text-sm text-[--color-text] dark:text-[--color-text-dark]">
+            <div key={t.id} className="text-sm text-(--color-text) dark:text-(--color-text-dark)">
               {t.agent} / {t.name}
             </div>
           ))}
           {templates?.length === 0 && (
-            <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">No prompt templates yet.</p>
+            <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">No prompt templates yet.</p>
           )}
         </div>
       )}
@@ -164,7 +164,7 @@ function PromptTemplatesCard() {
 export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Settings</h1>
+      <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Settings</h1>
       <EffectiveSettingsCard />
       <ModelRegistryCard />
       <PromptTemplatesCard />

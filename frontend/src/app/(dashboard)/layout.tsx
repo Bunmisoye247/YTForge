@@ -14,7 +14,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [isHydrating, isAuthenticated, router]);
 
   if (isHydrating) {
-    return <div className="flex h-screen items-center justify-center text-sm text-[--color-text-muted]">Loading…</div>;
+    return <div className="flex h-screen items-center justify-center text-sm text-(--color-text-muted)">Loading…</div>;
   }
   if (!isAuthenticated) return null;
 

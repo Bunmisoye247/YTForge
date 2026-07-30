@@ -27,7 +27,7 @@ export function DailyMetricsChart({ metrics }: { metrics: DailyMetricRead[] }) {
 
   if (metrics.length === 0) {
     return (
-      <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+      <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
         No daily metrics ingested yet.
       </p>
     );

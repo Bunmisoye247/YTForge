@@ -5,7 +5,6 @@ import { useSelectionStore } from "@/lib/stores/selection-store";
 import { useAssets } from "@/lib/hooks/use-assets";
 import { useCreateVideo, useVideos } from "@/lib/hooks/use-videos";
 import { useToast } from "@/lib/stores/toast-store";
-import { ProjectPicker } from "@/components/layout/ProjectPicker";
 import { AssetGallery } from "@/components/editors/AssetGallery";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
@@ -49,54 +48,51 @@ export default function VideosPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Videos</h1>
-        <ProjectPicker />
-      </div>
+      <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Videos</h1>
 
       {!projectId ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Select a project.</p>
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Select a project.</p>
       ) : (
         <>
           <Card>
             <CardHeader>
               <CardTitle>Video entities</CardTitle>
-              <Button size="sm" disabled={renderAssets.length === 0} onClick={() => setOpen(true)}>
+              <Button className="ml-auto" size="sm" disabled={renderAssets.length === 0} onClick={() => setOpen(true)}>
                 New video
               </Button>
             </CardHeader>
             {renderAssets.length === 0 && (
-              <p className="mb-2 text-xs text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+              <p className="mb-2 text-xs text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
                 No ready render assets yet — register one below before creating a video.
               </p>
             )}
             {isLoading ? (
-              <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>
+              <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {videoPage?.items.map((video) => (
-                  <div key={video.id} className="flex items-center justify-between rounded-md border border-[--color-border] p-3 text-sm dark:border-[--color-border-dark]">
+                  <div key={video.id} className="flex items-center justify-between rounded-md border border-(--color-border) p-3 text-sm dark:border-(--color-border-dark)">
                     <div>
-                      <div className="font-medium text-[--color-text] dark:text-[--color-text-dark]">{video.title}</div>
-                      <div className="text-xs text-[--color-text-muted] dark:text-[--color-text-muted-dark]">{video.description}</div>
+                      <div className="font-medium text-(--color-text) dark:text-(--color-text-dark)">{video.title}</div>
+                      <div className="text-xs text-(--color-text-muted) dark:text-(--color-text-muted-dark)">{video.description}</div>
                     </div>
                     <div className="flex items-center gap-3">
                       <StatusBadge status={video.status} />
-                      <Link href={`/uploads`} className="text-xs text-[--color-accent] dark:text-[--color-accent-dark]">
+                      <Link href={`/uploads`} className="text-xs text-(--color-accent) dark:text-(--color-accent-dark)">
                         Manage in Uploads →
                       </Link>
                     </div>
                   </div>
                 ))}
                 {videoPage?.items.length === 0 && (
-                  <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">No videos yet.</p>
+                  <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">No videos yet.</p>
                 )}
               </div>
             )}
           </Card>
 
           <div>
-            <h2 className="mb-3 text-sm font-semibold text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+            <h2 className="mb-3 text-sm font-semibold text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
               Clips, audio, music &amp; render assets
             </h2>
             <AssetGallery

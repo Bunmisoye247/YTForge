@@ -5,7 +5,6 @@ import { useSelectionStore } from "@/lib/stores/selection-store";
 import { useVideos } from "@/lib/hooks/use-videos";
 import { useIngestDailyMetric, useVideoAnalytics } from "@/lib/hooks/use-analytics";
 import { useToast } from "@/lib/stores/toast-store";
-import { ProjectPicker } from "@/components/layout/ProjectPicker";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -29,13 +28,10 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Analytics</h1>
-        <ProjectPicker />
-      </div>
+      <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Analytics</h1>
 
       {!projectId ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Select a project.</p>
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Select a project.</p>
       ) : (
         <Select value={videoId} onChange={(e) => setVideoId(e.target.value)} className="max-w-72" aria-label="Select video">
           <option value="">Select a video…</option>
@@ -56,7 +52,7 @@ export default function AnalyticsPage() {
           </div>
 
           {isLoading ? (
-            <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>
+            <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <Card>

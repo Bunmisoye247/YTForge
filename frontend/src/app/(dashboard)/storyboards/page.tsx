@@ -5,14 +5,16 @@ import { useSelectionStore } from "@/lib/stores/selection-store";
 import { useScripts } from "@/lib/hooks/use-scripts";
 import { useAddScene, useCreateStoryboard, useScenes, useStoryboard, useUpdateStoryboardStatus } from "@/lib/hooks/use-storyboards";
 import { useToast } from "@/lib/stores/toast-store";
-import { ProjectPicker } from "@/components/layout/ProjectPicker";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input, Label, Textarea } from "@/components/ui/Input";
+import { EmptyState, TrailStep } from "@/components/ui/EmptyState";
+import { IconLock, IconStoryboards, IconCheck } from "@/components/ui/icons";
 import { SceneTimeline } from "@/components/editors/SceneTimeline";
-import { StoryboardStatus } from "@/types/enums";
+import { StoryboardStatus, ScriptStatus } from "@/types/enums";
+import { titleCase } from "@/lib/utils/format";
 
 const NEXT_STATUSES: Record<string, StoryboardStatus[]> = {
   [StoryboardStatus.DRAFT]: [StoryboardStatus.READY],
@@ -35,33 +37,27 @@ export default function StoryboardsPage() {
   const [duration, setDuration] = useState("8");
 
   if (!projectId) {
-    return (
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Storyboards</h1>
-        <ProjectPicker />
-      </div>
-    );
+    return <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Storyboards</h1>;
   }
 
-  const approvedScript = scripts?.items.find((s) => s.status === "approved");
+  const approvedScript = scripts?.items.find((s) => s.status === ScriptStatus.APPROVED);
+  const latestScript = scripts?.items[0];
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Storyboards</h1>
-        <ProjectPicker />
+      <div>
+        <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Storyboards</h1>
+        <p className="mt-0.5 text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Scene-by-scene visual plan</p>
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>
-      ) : !storyboard ? (
-        <Card>
-          <p className="mb-3 text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
-            {approvedScript
-              ? "No storyboard yet for this project."
-              : "This project needs an approved script before a storyboard can be created."}
-          </p>
-          {approvedScript && (
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>
+      ) : !storyboard ? approvedScript ? (
+        <EmptyState
+          icon={<IconStoryboards />}
+          title="No storyboard yet"
+          description="Create a storyboard from your approved script to start planning scenes."
+          action={
             <Button
               isLoading={createStoryboard.isPending}
               onClick={() =>
@@ -72,8 +68,25 @@ export default function StoryboardsPage() {
             >
               Create storyboard
             </Button>
-          )}
-        </Card>
+          }
+        />
+      ) : (
+        <EmptyState
+          blocked
+          icon={<IconLock />}
+          title="Waiting on script approval"
+          description="Storyboards are generated from an approved script so scenes stay in sync with your final copy. Approve a script draft to unlock this stage."
+          trail={
+            <>
+              <span className="inline-flex items-center gap-1">
+                Idea <IconCheck className="h-3 w-3 text-(--color-success) dark:text-(--color-success-dark)" />
+              </span>
+              →
+              <TrailStep current>Script ({latestScript ? titleCase(latestScript.status) : "not started"})</TrailStep>
+              → Storyboard
+            </>
+          }
+        />
       ) : (
         <>
           <Card>

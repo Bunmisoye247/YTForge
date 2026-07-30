@@ -38,7 +38,7 @@ export function ApprovalDecisionDialog({ approval, onClose }: Props) {
   return (
     <Dialog open onClose={onClose} title={`Decide: ${approval.kind}`}>
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
           Requested {approval.requested_by_user_id ? `by user ${approval.requested_by_user_id}` : ""}
         </p>
         <div>

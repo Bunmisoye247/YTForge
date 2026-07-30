@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useSelectionStore } from "@/lib/stores/selection-store";
 import { useCreateScriptVersion, useFactChecks, useScripts, useUpdateScriptStatus } from "@/lib/hooks/use-scripts";
 import { useToast } from "@/lib/stores/toast-store";
-import { ProjectPicker } from "@/components/layout/ProjectPicker";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { IconScripts } from "@/components/ui/icons";
 import { ScriptSectionsEditor } from "@/components/editors/ScriptSectionsEditor";
 import { ScriptStatus } from "@/types/enums";
 import type { ScriptRead } from "@/lib/api/schemas/scripts";
@@ -20,7 +21,7 @@ function FactCheckList({ scriptId }: { scriptId: string }) {
       {factChecks.map((fc) => (
         <div key={fc.id} className="flex items-center gap-2 text-xs">
           <StatusBadge status={fc.verdict} />
-          <span className="text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+          <span className="text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
             {fc.flags.length} flag(s) · {fc.model_used ?? "unknown model"}
           </span>
         </div>
@@ -44,7 +45,7 @@ function ScriptCard({ script, onTransition, isTransitioning }: {
   return (
     <Card>
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-medium text-[--color-text] dark:text-[--color-text-dark]">Version {script.version}</span>
+        <span className="font-medium text-(--color-text) dark:text-(--color-text-dark)">Version {script.version}</span>
         <StatusBadge status={script.status} />
       </div>
       <FactCheckList scriptId={script.id} />
@@ -67,21 +68,30 @@ export default function ScriptsPage() {
   const toast = useToast();
   const [showEditor, setShowEditor] = useState(false);
 
+  const isEmpty = !isLoading && (scripts?.items.length ?? 0) === 0;
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Scripts</h1>
-        <ProjectPicker />
+      <div className="flex items-end gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Scripts</h1>
+          {projectId && (
+            <p className="mt-0.5 text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
+              Version history and drafts
+            </p>
+          )}
+        </div>
+        {projectId && !isEmpty && (
+          <Button className="ml-auto" onClick={() => setShowEditor((v) => !v)}>
+            {showEditor ? "Cancel" : "+ Write new version"}
+          </Button>
+        )}
       </div>
 
       {!projectId ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Select a project.</p>
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Select a project.</p>
       ) : (
         <>
-          <div className="flex justify-end">
-            <Button onClick={() => setShowEditor((v) => !v)}>{showEditor ? "Cancel" : "Write new version"}</Button>
-          </div>
-
           {showEditor && (
             <Card>
               <ScriptSectionsEditor
@@ -104,7 +114,16 @@ export default function ScriptsPage() {
           )}
 
           {isLoading ? (
-            <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>
+            <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>
+          ) : isEmpty ? (
+            <EmptyState
+              icon={<IconScripts />}
+              title="No drafts yet"
+              description="Generate a first draft from your approved idea, or write one from scratch. Every version is kept, so you can compare and roll back."
+              action={
+                !showEditor && <Button onClick={() => setShowEditor(true)}>Write first draft</Button>
+              }
+            />
           ) : (
             <div className="flex flex-col gap-3">
               {scripts?.items.map((script) => (
@@ -120,9 +139,6 @@ export default function ScriptsPage() {
                   }
                 />
               ))}
-              {scripts?.items.length === 0 && (
-                <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">No script versions yet.</p>
-              )}
             </div>
           )}
         </>

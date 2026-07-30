@@ -26,7 +26,7 @@ export default function IdeasPage() {
   const toast = useToast();
 
   if (!channelId) {
-    return <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Select a channel to see its ideas.</p>;
+    return <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Select a channel to see its ideas.</p>;
   }
 
   const handleCreate = () => {
@@ -51,7 +51,7 @@ export default function IdeasPage() {
       header: "Link",
       cell: (t) =>
         t.url ? (
-          <a href={t.url} target="_blank" rel="noreferrer" className="text-[--color-accent] dark:text-[--color-accent-dark]">
+          <a href={t.url} target="_blank" rel="noreferrer" className="text-(--color-accent) dark:text-(--color-accent-dark)">
             Open
           </a>
         ) : null,
@@ -62,8 +62,8 @@ export default function IdeasPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Ideas</h1>
-          <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+          <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Ideas</h1>
+          <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
             Manual trend entry — automated discovery lands with the TrendAgent (Phase 6).
           </p>
         </div>

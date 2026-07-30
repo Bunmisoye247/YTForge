@@ -32,26 +32,26 @@ export default function ChannelsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[--color-text] dark:text-[--color-text-dark]">Channels</h1>
+        <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Channels</h1>
         <Button onClick={() => setOpen(true)}>New channel</Button>
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">Loading…</p>
+        <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {channels?.map((channel) => (
             <Card key={channel.id}>
-              <div className="font-medium text-[--color-text] dark:text-[--color-text-dark]">{channel.name}</div>
+              <div className="font-medium text-(--color-text) dark:text-(--color-text-dark)">{channel.name}</div>
               {channel.youtube_channel_id && (
-                <div className="mt-1 text-xs text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
+                <div className="mt-1 text-xs text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
                   YouTube: {channel.youtube_channel_id}
                 </div>
               )}
             </Card>
           ))}
           {channels?.length === 0 && (
-            <p className="text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">No channels yet.</p>
+            <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">No channels yet.</p>
           )}
         </div>
       )}

@@ -35,8 +35,8 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-lg border border-[--color-border] p-6 dark:border-[--color-border-dark]">
-        <h1 className="mb-4 text-lg font-semibold text-[--color-text] dark:text-[--color-text-dark]">Create your account</h1>
+      <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-lg border border-(--color-border) p-6 dark:border-(--color-border-dark)">
+        <h1 className="mb-4 text-lg font-semibold text-(--color-text) dark:text-(--color-text-dark)">Create your account</h1>
         <div className="mb-3">
           <Label htmlFor="full_name">Full name</Label>
           <Input id="full_name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -60,8 +60,8 @@ export default function RegisterPage() {
         <Button type="submit" className="mt-2 w-full" isLoading={isLoading}>
           Register
         </Button>
-        <p className="mt-4 text-center text-sm text-[--color-text-muted] dark:text-[--color-text-muted-dark]">
-          Already have an account? <Link href="/login" className="text-[--color-accent] dark:text-[--color-accent-dark]">Log in</Link>
+        <p className="mt-4 text-center text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
+          Already have an account? <Link href="/login" className="text-(--color-accent) dark:text-(--color-accent-dark)">Log in</Link>
         </p>
       </form>
     </div>
