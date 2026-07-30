@@ -33,12 +33,23 @@ jobs:
           - image: api
             dockerfile: backend/Dockerfile
             context: .
+            build-args: ""
           - image: renderer
             dockerfile: backend/Dockerfile.renderer
             context: .
+            build-args: ""
           - image: web
             dockerfile: frontend/Dockerfile
             context: .
+            # Next.js inlines NEXT_PUBLIC_* into the client bundle at build
+            # time, so this has to be baked in here — a runtime env var on
+            # the host can't change it after the fact. vars (not secrets)
+            # because it's a public URL, literally meant to ship to the
+            # browser. Set the `NEXT_PUBLIC_API_BASE_URL` repository
+            # variable (Settings -> Secrets and variables -> Actions ->
+            # Variables) to your real API origin; rebuild after changing it.
+            build-args: |
+              NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,6 +69,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build-args }}
           platforms: linux/amd64
           load: true
           tags: ghcr.io/${{ steps.repo.outputs.name }}/${{ matrix.image }}:${{ github.event.workflow_run.head_sha }}
@@ -73,6 +85,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build-args }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
