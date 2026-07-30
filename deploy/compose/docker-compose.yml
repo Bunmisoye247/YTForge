@@ -41,6 +41,12 @@ x-backend-env: &backend-env
     YTFORGE__OBSERVABILITY__OTEL_EXPORTER_ENDPOINT: ${OTEL_EXPORTER_ENDPOINT:-}
 
 x-backend-image: &backend-image
+  # `image:` lets `docker compose pull` fetch the CI-built, Trivy-scanned
+  # image from GHCR (what deploy.yml pushes) instead of needing the repo
+  # source on the host; `build:` is still here so `docker compose build`
+  # works for anyone running this from a full checkout without registry
+  # access. Compose prefers an already-pulled `image:` over rebuilding.
+  image: ${GHCR_IMAGE_PREFIX:-ghcr.io/bunmisoye247/ytforge}/api:${IMAGE_TAG:-latest}
   build:
     context: ../..
     dockerfile: backend/Dockerfile
@@ -189,6 +195,7 @@ services:
   renderer:
     <<: *backend-env
     profiles: ["core"]
+    image: ${GHCR_IMAGE_PREFIX:-ghcr.io/bunmisoye247/ytforge}/renderer:${IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: backend/Dockerfile.renderer
@@ -212,6 +219,7 @@ services:
 
   web:
     profiles: ["core"]
+    image: ${GHCR_IMAGE_PREFIX:-ghcr.io/bunmisoye247/ytforge}/web:${IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: frontend/Dockerfile
