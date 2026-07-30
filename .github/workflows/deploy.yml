@@ -110,5 +110,10 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd /opt/ytforge
-            docker compose -f deploy/compose/docker-compose.yml --profile core pull
-            docker compose -f deploy/compose/docker-compose.yml --profile core up -d
+            # --env-file is required explicitly: compose's automatic .env
+            # discovery defaults to the directory of the *compose file*
+            # (deploy/compose/), not the invocation cwd, so ${VAR}
+            # interpolation in the compose file (POSTGRES_PASSWORD, etc.)
+            # silently fell back to blank without this.
+            docker compose -f deploy/compose/docker-compose.yml --env-file .env --profile core pull
+            docker compose -f deploy/compose/docker-compose.yml --env-file .env --profile core up -d
