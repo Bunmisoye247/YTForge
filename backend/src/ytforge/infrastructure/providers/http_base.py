@@ -23,11 +23,17 @@ class ProviderHttpClient:
         self._client = httpx.AsyncClient(base_url=base_url, headers=headers or {}, timeout=_TIMEOUT)
 
     async def post_json(self, path: str, json_body: dict[str, Any]) -> dict[str, Any]:
-        response = await self._client.post(path, json=json_body)
+        try:
+            response = await self._client.post(path, json=json_body)
+        except httpx.HTTPError as exc:
+            raise ProviderRequestError(self._provider, f"connection failed: {exc}") from exc
         return self._handle(response)
 
     async def get_json(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        response = await self._client.get(path, params=params)
+        try:
+            response = await self._client.get(path, params=params)
+        except httpx.HTTPError as exc:
+            raise ProviderRequestError(self._provider, f"connection failed: {exc}") from exc
         return self._handle(response)
 
     def _handle(self, response: httpx.Response) -> dict[str, Any]:

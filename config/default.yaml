@@ -35,15 +35,15 @@ observability:
 models:
   provider_set: real
   routes:
-    script_writing: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, ollama/qwen2.5:72b, gemini/gemini-2.0-flash]}
-    fact_checking: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-2.0-flash]}
-    research_summary: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-2.0-flash]}
-    storyboard: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-2.0-flash]}
-    seo: {primary: ollama/llama3.3:70b, fallback: [gemini/gemini-2.0-flash, openai/gpt-4.1]}
-    trend_scoring: {primary: ollama/llama3.3:70b, fallback: [openai/gpt-4.1, gemini/gemini-2.0-flash]}
-    voice_direction: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-2.0-flash]}
-    analytics_insights: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-2.0-flash]}
-    embeddings: {primary: openai/text-embedding-3-large, fallback: [ollama/nomic-embed-text]}
+    script_writing: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, ollama/qwen2.5:72b, gemini/gemini-flash-latest]}
+    fact_checking: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-flash-latest]}
+    research_summary: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest]}
+    storyboard: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest]}
+    seo: {primary: ollama/llama3.3:70b, fallback: [gemini/gemini-flash-latest, openai/gpt-4.1]}
+    trend_scoring: {primary: ollama/llama3.3:70b, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest]}
+    voice_direction: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest]}
+    analytics_insights: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-flash-latest]}
+    embeddings: {primary: openai/text-embedding-3-large, fallback: [gemini/gemini-embedding-001]}
     image_generation: {primary: flux_api/flux-pro-1.1, fallback: [comfyui/sdxl, a1111/sdxl]}
     video_generation: {primary: runway/gen3, fallback: [luma/dream-machine, kling/v1]}
     voice_synthesis: {primary: elevenlabs/eleven_multilingual_v2, fallback: [playht/PlayHT2.0]}
