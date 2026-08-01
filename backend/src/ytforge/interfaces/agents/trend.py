@@ -8,7 +8,7 @@ from ytforge.application.use_cases.trends import RecordTrendInput, record_trend
 from ytforge.domain.enums import TrendSource
 from ytforge.interfaces.agents.base import AgentResult, AgentTask
 from ytforge.interfaces.agents.context import AgentContext
-from ytforge.interfaces.agents.support import run_llm_step
+from ytforge.interfaces.agents.support import parse_json_response, run_llm_step
 
 
 class TrendAgent:
@@ -40,7 +40,7 @@ class TrendAgent:
         )
 
         try:
-            scored: list[dict[str, Any]] = json.loads(response.content)
+            scored: list[dict[str, Any]] = parse_json_response(response.content)
         except json.JSONDecodeError:
             return AgentResult.failure(f"trend agent did not return valid JSON: {response.content[:200]!r}")
 

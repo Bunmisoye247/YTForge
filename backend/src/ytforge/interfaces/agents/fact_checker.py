@@ -8,7 +8,7 @@ from ytforge.application.use_cases.fact_check import RecordFactCheckInput, recor
 from ytforge.domain.enums import FactCheckVerdict
 from ytforge.interfaces.agents.base import AgentResult, AgentTask
 from ytforge.interfaces.agents.context import AgentContext
-from ytforge.interfaces.agents.support import run_llm_step
+from ytforge.interfaces.agents.support import parse_json_response, run_llm_step
 
 
 class FactCheckerAgent:
@@ -37,7 +37,7 @@ class FactCheckerAgent:
         )
 
         try:
-            parsed = json.loads(response.content)
+            parsed = parse_json_response(response.content)
             verdict = FactCheckVerdict(parsed["verdict"])
             flags = parsed.get("flags", [])
         except (json.JSONDecodeError, KeyError, ValueError):

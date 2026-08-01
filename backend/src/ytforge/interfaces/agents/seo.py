@@ -7,7 +7,7 @@ from ytforge.application.common.errors import NotFoundError
 from ytforge.application.use_cases.seo import SetSeoMetadataInput, set_seo_metadata
 from ytforge.interfaces.agents.base import AgentResult, AgentTask
 from ytforge.interfaces.agents.context import AgentContext
-from ytforge.interfaces.agents.support import run_llm_step
+from ytforge.interfaces.agents.support import parse_json_response, run_llm_step
 
 
 class SEOAgent:
@@ -38,7 +38,7 @@ class SEOAgent:
         )
 
         try:
-            parsed = json.loads(response.content)
+            parsed = parse_json_response(response.content)
         except json.JSONDecodeError:
             return AgentResult.failure(f"seo agent did not return valid JSON: {response.content[:200]!r}")
 

@@ -6,7 +6,7 @@ from ytforge.application.common.pagination import PageParams
 from ytforge.application.use_cases.scripts import CreateScriptVersionInput, create_script_version
 from ytforge.interfaces.agents.base import AgentResult, AgentTask
 from ytforge.interfaces.agents.context import AgentContext
-from ytforge.interfaces.agents.support import run_llm_step
+from ytforge.interfaces.agents.support import parse_json_response, run_llm_step
 
 
 class WriterAgent:
@@ -38,7 +38,7 @@ class WriterAgent:
         )
 
         try:
-            sections = json.loads(response.content)
+            sections = parse_json_response(response.content)
         except json.JSONDecodeError:
             return AgentResult.failure(f"writer agent did not return valid JSON: {response.content[:200]!r}")
 

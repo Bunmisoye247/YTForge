@@ -8,7 +8,7 @@ from ytforge.application.common.errors import NotFoundError
 from ytforge.application.use_cases.storyboard import AddSceneInput, add_scene, create_storyboard
 from ytforge.interfaces.agents.base import AgentResult, AgentTask
 from ytforge.interfaces.agents.context import AgentContext
-from ytforge.interfaces.agents.support import run_llm_step
+from ytforge.interfaces.agents.support import parse_json_response, run_llm_step
 
 
 class StoryboardAgent:
@@ -36,7 +36,7 @@ class StoryboardAgent:
         )
 
         try:
-            scenes_data: list[dict[str, object]] = json.loads(response.content)
+            scenes_data: list[dict[str, object]] = parse_json_response(response.content)
         except json.JSONDecodeError:
             return AgentResult.failure(
                 f"storyboard agent did not return valid JSON: {response.content[:200]!r}"

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 import uuid
 from decimal import Decimal
 from typing import Any
@@ -9,6 +11,23 @@ from ytforge.application.dto.prompt import RenderedPrompt
 from ytforge.application.use_cases.prompts import RecordPromptRunInput, record_prompt_run
 from ytforge.domain.enums import PromptRunStatus
 from ytforge.interfaces.agents.context import AgentContext
+
+_CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```$", re.DOTALL)
+
+
+def parse_json_response(content: str) -> Any:
+    """Every JSON-parsing agent routes through here instead of a bare
+    `json.loads(response.content)` — some providers (Groq/Llama-family
+    models in particular) wrap JSON output in a markdown code fence even
+    when the prompt says not to. Strips one fence if present; raises
+    `json.JSONDecodeError` same as a bare `json.loads` for genuinely
+    malformed output, so existing `except json.JSONDecodeError` callers
+    need no other change."""
+    stripped = content.strip()
+    match = _CODE_FENCE_RE.match(stripped)
+    if match:
+        stripped = match.group(1).strip()
+    return json.loads(stripped)
 
 
 async def run_llm_step(
