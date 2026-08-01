@@ -22,7 +22,7 @@ def _provider(storage: FakeObjectStorage | None = None, cost_per_second_usd: flo
 
 @respx.mock
 async def test_generate_uses_text_to_video_when_no_image_reference() -> None:
-    route = respx.post("https://api.runwayml.com/v1/text_to_video").mock(
+    route = respx.post("https://api.dev.runwayml.com/v1/text_to_video").mock(
         return_value=httpx.Response(200, json={"id": "task-123"})
     )
     provider = _provider()
@@ -35,7 +35,7 @@ async def test_generate_uses_text_to_video_when_no_image_reference() -> None:
 
 @respx.mock
 async def test_generate_uses_image_to_video_when_reference_given() -> None:
-    respx.post("https://api.runwayml.com/v1/image_to_video").mock(
+    respx.post("https://api.dev.runwayml.com/v1/image_to_video").mock(
         return_value=httpx.Response(200, json={"id": "task-456"})
     )
     provider = _provider()
@@ -47,7 +47,7 @@ async def test_generate_uses_image_to_video_when_reference_given() -> None:
 
 @respx.mock
 async def test_poll_returns_running_while_incomplete() -> None:
-    respx.get("https://api.runwayml.com/v1/tasks/task-123").mock(
+    respx.get("https://api.dev.runwayml.com/v1/tasks/task-123").mock(
         return_value=httpx.Response(200, json={"status": "RUNNING"})
     )
     provider = _provider()
@@ -60,7 +60,7 @@ async def test_poll_returns_running_while_incomplete() -> None:
 
 @respx.mock
 async def test_poll_downloads_provider_video_and_stores_it_with_duration_scaled_cost() -> None:
-    respx.get("https://api.runwayml.com/v1/tasks/task-123").mock(
+    respx.get("https://api.dev.runwayml.com/v1/tasks/task-123").mock(
         return_value=httpx.Response(
             200, json={"status": "SUCCEEDED", "output": ["https://cdn.runwayml.com/output/task-123.mp4"]}
         )
@@ -82,7 +82,7 @@ async def test_poll_downloads_provider_video_and_stores_it_with_duration_scaled_
 
 @respx.mock
 async def test_generate_stamps_job_with_requested_duration() -> None:
-    respx.post("https://api.runwayml.com/v1/text_to_video").mock(
+    respx.post("https://api.dev.runwayml.com/v1/text_to_video").mock(
         return_value=httpx.Response(200, json={"id": "task-789"})
     )
     provider = _provider()
@@ -94,7 +94,7 @@ async def test_generate_stamps_job_with_requested_duration() -> None:
 
 @respx.mock
 async def test_poll_returns_failed_with_error_message() -> None:
-    respx.get("https://api.runwayml.com/v1/tasks/task-123").mock(
+    respx.get("https://api.dev.runwayml.com/v1/tasks/task-123").mock(
         return_value=httpx.Response(200, json={"status": "FAILED", "failure": "content policy violation"})
     )
     provider = _provider()

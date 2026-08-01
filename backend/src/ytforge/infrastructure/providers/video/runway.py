@@ -9,7 +9,7 @@ from ytforge.application.ports.providers.object_storage import ObjectStorage
 from ytforge.infrastructure.providers.http_base import ProviderHttpClient
 from ytforge.infrastructure.telemetry.provider_metrics import record_provider_call
 
-_BASE_URL = "https://api.runwayml.com/v1"
+_BASE_URL = "https://api.dev.runwayml.com/v1"
 _STATE_MAP = {
     "PENDING": VideoJobState.QUEUED,
     "THROTTLED": VideoJobState.QUEUED,
