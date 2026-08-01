@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import httpx
 import respx
 
@@ -31,6 +33,8 @@ async def test_generate_uses_text_to_video_when_no_image_reference() -> None:
 
     assert job.provider_job_id == "task-123"
     assert route.calls.last.request.headers["Authorization"] == "Bearer key-1"
+    body = json.loads(route.calls.last.request.content)
+    assert body["ratio"] == "1280:720"
 
 
 @respx.mock

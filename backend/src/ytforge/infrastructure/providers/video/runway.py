@@ -44,6 +44,11 @@ class RunwayProvider:
                 "model": req.model,
                 "promptText": req.prompt,
                 "duration": req.duration_seconds,
+                # Required by Runway's API; landscape is the only sensible
+                # default until VideoRequest carries a per-project aspect
+                # ratio (every route this adapter serves today is YouTube
+                # long-form/landscape).
+                "ratio": "1280:720",
             }
             if req.image_reference_key:
                 body["promptImage"] = req.image_reference_key

@@ -45,7 +45,7 @@ models:
     analytics_insights: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
     embeddings: {primary: openai/text-embedding-3-large, fallback: [gemini/gemini-embedding-001]}
     image_generation: {primary: flux_api/flux-pro-1.1, fallback: [comfyui/sdxl, a1111/sdxl]}
-    video_generation: {primary: runway/gen3, fallback: [luma/dream-machine, kling/v1]}
+    video_generation: {primary: runway/gen4.5, fallback: [luma/dream-machine, kling/v1]}
     voice_synthesis: {primary: elevenlabs/eleven_multilingual_v2, fallback: [playht/PlayHT2.0]}
     music_generation: {primary: suno/v3, fallback: [udio/v1, mubert/v1]}
   discovery:
