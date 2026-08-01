@@ -25,6 +25,7 @@ from ytforge.infrastructure.providers.image import (
 from ytforge.infrastructure.providers.llm import (
     AnthropicProvider,
     GeminiProvider,
+    GroqProvider,
     LMStudioProvider,
     OllamaProvider,
     OpenAIProvider,
@@ -60,7 +61,7 @@ def build_fake_registries() -> ProviderRegistries:
     configured "provider/model" string still gets split and the model name
     still flows into the request, only the transport is faked."""
     return ProviderRegistries(
-        llm={name: FakeLLMProvider() for name in ("openai", "anthropic", "gemini", "ollama", "lmstudio")},
+        llm={name: FakeLLMProvider() for name in ("openai", "anthropic", "gemini", "groq", "ollama", "lmstudio")},
         image={name: FakeImageProvider() for name in ("flux_api", "sdxl_diffusers", "comfyui", "a1111")},
         video={name: FakeVideoProvider() for name in ("veo", "runway", "kling", "luma", "hailuo")},
         tts={name: FakeTTSProvider() for name in ("elevenlabs", "playht", "azure_tts", "kokoro", "piper")},
@@ -94,6 +95,11 @@ def build_real_registries(
         registries.llm["gemini"] = GeminiProvider(
             providers.gemini.api_key.get_secret_value() if providers.gemini.api_key else "",
             providers.gemini.cost_per_unit_usd,
+        )
+    if providers.groq.is_configured:
+        registries.llm["groq"] = GroqProvider(
+            providers.groq.api_key.get_secret_value() if providers.groq.api_key else "",
+            providers.groq.cost_per_unit_usd,
         )
     if providers.ollama.is_configured and providers.ollama.base_url:
         registries.llm["ollama"] = OllamaProvider(providers.ollama.base_url)

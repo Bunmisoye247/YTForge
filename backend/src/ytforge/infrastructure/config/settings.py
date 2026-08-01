@@ -132,6 +132,7 @@ class ProvidersSettings(BaseModel):
     openai: ProviderSettings = ProviderSettings()
     anthropic: ProviderSettings = ProviderSettings()
     gemini: ProviderSettings = ProviderSettings()
+    groq: ProviderSettings = ProviderSettings()
     ollama: ProviderSettings = ProviderSettings()
     lmstudio: ProviderSettings = ProviderSettings()
     flux_api: ProviderSettings = ProviderSettings()

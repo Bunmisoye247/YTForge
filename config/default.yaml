@@ -35,14 +35,14 @@ observability:
 models:
   provider_set: real
   routes:
-    script_writing: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, ollama/qwen2.5:72b, gemini/gemini-flash-latest]}
-    fact_checking: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-flash-latest]}
-    research_summary: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest]}
-    storyboard: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest]}
-    seo: {primary: ollama/llama3.3:70b, fallback: [gemini/gemini-flash-latest, openai/gpt-4.1]}
-    trend_scoring: {primary: ollama/llama3.3:70b, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest]}
-    voice_direction: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest]}
-    analytics_insights: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-flash-latest]}
+    script_writing: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, ollama/qwen2.5:72b, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
+    fact_checking: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
+    research_summary: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
+    storyboard: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
+    seo: {primary: ollama/llama3.3:70b, fallback: [gemini/gemini-flash-latest, openai/gpt-4.1, groq/llama-3.3-70b-versatile]}
+    trend_scoring: {primary: ollama/llama3.3:70b, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
+    voice_direction: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
+    analytics_insights: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
     embeddings: {primary: openai/text-embedding-3-large, fallback: [gemini/gemini-embedding-001]}
     image_generation: {primary: flux_api/flux-pro-1.1, fallback: [comfyui/sdxl, a1111/sdxl]}
     video_generation: {primary: runway/gen3, fallback: [luma/dream-machine, kling/v1]}
@@ -82,6 +82,7 @@ providers:
   openai: {api_key: "${OPENAI_API_KEY}"}
   anthropic: {api_key: "${ANTHROPIC_API_KEY}"}
   gemini: {api_key: "${GEMINI_API_KEY}"}
+  groq: {api_key: "${GROQ_API_KEY}"}
   ollama: {base_url: http://localhost:11434}
   lmstudio: {base_url: http://localhost:1234}
   flux_api: {api_key: "${FLUX_API_KEY}"}
