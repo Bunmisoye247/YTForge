@@ -69,6 +69,12 @@ class RedisSettings(BaseModel):
 
 class MinioSettings(BaseModel):
     endpoint: str = "localhost:9000"
+    # `endpoint` is the docker-network-internal address (e.g. "minio:9000")
+    # api/worker use for actual put/get calls — never reachable from a
+    # browser. Presigned URLs are handed to the browser directly, so they
+    # need a publicly-resolvable host:port instead; defaults to `endpoint`
+    # for local dev (where both are the same localhost address).
+    public_endpoint: str | None = None
     access_key: str = "minioadmin"
     secret_key: SecretStr = SecretStr("minioadmin")
     secure: bool = False

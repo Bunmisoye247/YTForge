@@ -14,6 +14,18 @@ export function useAssets(projectId: string, params?: PageParams) {
   });
 }
 
+export function useAssetPresignedUrl(assetId: string | undefined) {
+  return useQuery({
+    queryKey: ["assets", "presigned-url", assetId ?? ""],
+    queryFn: () => assetsApi.getAssetPresignedUrl(assetId as string),
+    enabled: Boolean(assetId),
+    // Presigned URLs expire (default 1h server-side) — treat as stale
+    // quickly enough that a long-open tab doesn't hold a dead link, but
+    // not so eagerly that every render re-fetches.
+    staleTime: 15 * 60 * 1000,
+  });
+}
+
 export function useRegisterAsset(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({

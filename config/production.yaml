@@ -12,3 +12,10 @@ app:
 database:
   echo: false
   pool_size: 20
+
+minio:
+  # MinIO's own port is published on the same host per docker-compose.yml
+  # (9000:9000) — presigned URLs need this public address, not the
+  # docker-network-internal `minio:9000` every other MinIO call uses.
+  # Update alongside cors_origins if/when a real domain replaces IP access.
+  public_endpoint: 169.58.94.97:9000

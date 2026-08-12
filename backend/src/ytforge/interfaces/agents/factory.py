@@ -44,6 +44,7 @@ def build_agent_context(settings: Settings, uow: UnitOfWork) -> AgentContext:
             settings.minio.access_key,
             settings.minio.secret_key.get_secret_value(),
             settings.minio.secure,
+            settings.minio.public_endpoint,
         )
     )
     raw_assets_bucket = settings.minio.buckets["raw_assets"]

@@ -29,3 +29,7 @@ class AssetRead(BaseModel):
     object_key: str
     checksum_sha256: str | None
     provenance: dict[str, Any]
+
+
+class PresignedUrlRead(BaseModel):
+    url: str

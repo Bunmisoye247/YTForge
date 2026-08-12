@@ -18,8 +18,24 @@ class MinioObjectStorage:
     created lazily on first write, matching local-dev ergonomics (no
     separate bucket-provisioning step needed before the app can run)."""
 
-    def __init__(self, endpoint: str, access_key: str, secret_key: str, secure: bool = False) -> None:
+    def __init__(
+        self,
+        endpoint: str,
+        access_key: str,
+        secret_key: str,
+        secure: bool = False,
+        public_endpoint: str | None = None,
+    ) -> None:
         self._client = Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
+        # Separate client purely for presigned-URL generation — MinIO signs
+        # the URL against whatever host the client was built with, and that
+        # host must be the browser-reachable one, not the docker-network-
+        # internal `endpoint` every other call here uses.
+        self._public_client = (
+            self._client
+            if public_endpoint is None
+            else Minio(public_endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
+        )
         self._ensured_buckets: set[str] = set()
 
     async def _ensure_bucket(self, bucket: str) -> None:
@@ -56,7 +72,7 @@ class MinioObjectStorage:
         async with record_provider_call("minio", "storage.presigned_url"):
             url: str = await asyncio.to_thread(
                 partial(
-                    self._client.presigned_get_object,
+                    self._public_client.presigned_get_object,
                     bucket,
                     key,
                     expires=timedelta(seconds=ttl_seconds),

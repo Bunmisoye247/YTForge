@@ -38,3 +38,6 @@ export type AssetRegisterRequest = {
   checksum_sha256?: string | null;
   provenance?: Record<string, unknown>;
 };
+
+export const presignedUrlReadSchema = z.object({ url: z.string() });
+export type PresignedUrlRead = z.infer<typeof presignedUrlReadSchema>;

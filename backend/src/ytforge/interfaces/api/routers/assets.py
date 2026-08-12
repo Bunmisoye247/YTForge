@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from ytforge.application.common.errors import InvalidStateError, NotFoundError
 from ytforge.application.common.pagination import PageParams
 from ytforge.application.ports.providers import UnitOfWork
+from ytforge.application.ports.providers.object_storage import ObjectStorage
 from ytforge.application.use_cases.assets import (
     RegisterAssetInput,
     list_assets,
@@ -20,8 +21,9 @@ from ytforge.domain.enums import ChannelRole
 from ytforge.interfaces.api.deps.auth import CurrentUser, require_project_role
 from ytforge.interfaces.api.deps.db import get_uow
 from ytforge.interfaces.api.deps.pagination import page_params
+from ytforge.interfaces.api.deps.storage import get_object_storage
 from ytforge.interfaces.api.schemas.approvals import ApprovalRead
-from ytforge.interfaces.api.schemas.assets import AssetRead, AssetRegisterRequest
+from ytforge.interfaces.api.schemas.assets import AssetRead, AssetRegisterRequest, PresignedUrlRead
 from ytforge.interfaces.api.schemas.pagination import PageResponse
 
 router = APIRouter(tags=["assets"])
@@ -63,6 +65,23 @@ async def list_(
 ) -> PageResponse[AssetRead]:
     page = await list_assets(uow, project_id, params)
     return PageResponse.from_page(page, AssetRead)
+
+
+@router.get("/assets/{asset_id}/presigned-url", response_model=PresignedUrlRead)
+async def presigned_url(
+    asset_id: uuid.UUID,
+    user: CurrentUser,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    storage: Annotated[ObjectStorage, Depends(get_object_storage)],
+) -> PresignedUrlRead:
+    """A short-lived, browser-reachable URL for an asset's bytes
+    (ARCHITECTURE.md §6.3: "All dashboard media access via presigned
+    URLs — the API never proxies bytes")."""
+    asset = await uow.assets.get_by_id(asset_id)
+    if asset is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "asset not found")
+    url = await storage.presigned_url(asset.bucket, asset.object_key)
+    return PresignedUrlRead(url=url)
 
 
 @router.post("/assets/{asset_id}/ready", response_model=AssetRead)

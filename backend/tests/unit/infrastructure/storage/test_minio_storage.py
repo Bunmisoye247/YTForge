@@ -49,6 +49,7 @@ def _storage_with_fake_client() -> tuple[MinioObjectStorage, _FakeMinioClient]:
     storage = MinioObjectStorage(endpoint="localhost:9000", access_key="x", secret_key="y", secure=False)
     fake_client = _FakeMinioClient()
     storage._client = fake_client  # type: ignore[assignment]
+    storage._public_client = fake_client  # type: ignore[assignment]
     return storage, fake_client
 
 
@@ -87,3 +88,17 @@ async def test_presigned_url_delegates_to_client() -> None:
 
     assert url == "https://minio.local/renders/final.mp4?signed=1"
     assert client.presign_calls == [("renders", "final.mp4")]
+
+
+def test_without_public_endpoint_reuses_the_internal_client_for_presigning() -> None:
+    storage = MinioObjectStorage(endpoint="minio:9000", access_key="x", secret_key="y")
+
+    assert storage._public_client is storage._client  # type: ignore[attr-defined]
+
+
+def test_with_public_endpoint_builds_a_separate_presigning_client() -> None:
+    storage = MinioObjectStorage(
+        endpoint="minio:9000", access_key="x", secret_key="y", public_endpoint="203.0.113.10:9000"
+    )
+
+    assert storage._public_client is not storage._client  # type: ignore[attr-defined]
