@@ -53,3 +53,14 @@ export function useReorderScenes(storyboardId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.storyboards.scenes(storyboardId) }),
   });
 }
+
+/** Generates (or regenerates) a single scene's image outside the full
+ * pipeline — invalidates the project's asset gallery so the new image
+ * shows up there once it lands. */
+export function useGenerateSceneImage(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (sceneId: string) => storyboardsApi.generateSceneImage(projectId, sceneId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.assets.list(projectId) }),
+  });
+}

@@ -116,7 +116,7 @@ export default function StoryboardsPage() {
             </div>
           </Card>
 
-          <SceneTimeline storyboardId={storyboard.id} />
+          <SceneTimeline storyboardId={storyboard.id} projectId={projectId} />
 
           <Dialog open={sceneDialogOpen} onClose={() => setSceneDialogOpen(false)} title="Add scene">
             <div className="flex flex-col gap-3">

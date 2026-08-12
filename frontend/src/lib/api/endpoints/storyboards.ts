@@ -9,6 +9,7 @@ import {
   type StoryboardRead,
   type StoryboardStatusUpdateRequest,
 } from "@/lib/api/schemas/storyboards";
+import { assetReadSchema, type AssetRead } from "@/lib/api/schemas/assets";
 import { z } from "zod";
 
 export function createStoryboard(
@@ -47,4 +48,11 @@ export function reorderScenes(storyboardId: string, orderedSceneIds: string[]): 
   return apiClient.post(`/storyboards/${storyboardId}/scenes/reorder`, z.array(sceneReadSchema), {
     ordered_scene_ids: orderedSceneIds,
   });
+}
+
+/** Runs ImageAgent for one scene outside the full pipeline — generates
+ * (or regenerates) just that scene's image via ModelRouter's
+ * image_generation route (Pollinations/ComfyUI/A1111/Flux). */
+export function generateSceneImage(projectId: string, sceneId: string): Promise<AssetRead[]> {
+  return apiClient.post(`/projects/${projectId}/scenes/${sceneId}/generate-image`, z.array(assetReadSchema));
 }

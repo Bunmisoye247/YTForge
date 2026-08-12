@@ -17,8 +17,12 @@ from ytforge.application.use_cases.storyboard import (
     transition_storyboard_status,
 )
 from ytforge.domain.enums import ChannelRole
+from ytforge.infrastructure.config.settings import get_settings
+from ytforge.interfaces.agents import AGENTS, AgentTask
+from ytforge.interfaces.agents.factory import build_agent_context
 from ytforge.interfaces.api.deps.auth import CurrentUser, require_project_role
 from ytforge.interfaces.api.deps.db import get_uow
+from ytforge.interfaces.api.schemas.assets import AssetRead
 from ytforge.interfaces.api.schemas.storyboards import (
     SceneCreateRequest,
     SceneRead,
@@ -130,3 +134,37 @@ async def reorder(
         code = status.HTTP_404_NOT_FOUND if isinstance(exc, NotFoundError) else status.HTTP_409_CONFLICT
         raise HTTPException(code, str(exc)) from exc
     return [SceneRead.model_validate(scene) for scene in scenes]
+
+
+@router.post(
+    "/projects/{project_id}/scenes/{scene_id}/generate-image",
+    response_model=list[AssetRead],
+    status_code=status.HTTP_201_CREATED,
+)
+async def generate_image(
+    project_id: uuid.UUID,
+    scene_id: uuid.UUID,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    _actor: Annotated[object, Depends(require_project_role(ChannelRole.EDITOR))],
+) -> list[AssetRead]:
+    """Runs ImageAgent for a single scene outside the full
+    VideoProductionWorkflow — the same agent, context, and provider
+    routing (ModelRouter's image_generation route, Pollinations/ComfyUI/
+    A1111/Flux per config/default.yaml) the pipeline uses, just invoked
+    directly and synchronously (same reuse pattern as the `run-agent` CLI
+    command) so a single image can be generated or regenerated without
+    running the whole workflow."""
+    settings = get_settings()
+    ctx = build_agent_context(settings, uow)
+    task = AgentTask(project_id=project_id, payload={"scene_ids": [str(scene_id)]})
+    result = await AGENTS["image"].run(task, ctx)
+    if not result.ok:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, result.error or "image generation failed")
+
+    asset_ids = result.output.get("asset_ids", [])
+    assets = []
+    for asset_id_raw in asset_ids:
+        asset = await uow.assets.get_by_id(uuid.UUID(asset_id_raw))
+        if asset is not None:
+            assets.append(asset)
+    return [AssetRead.model_validate(asset) for asset in assets]

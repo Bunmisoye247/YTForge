@@ -1,16 +1,19 @@
 "use client";
 
-import { useScenes, useReorderScenes } from "@/lib/hooks/use-storyboards";
+import { useScenes, useReorderScenes, useGenerateSceneImage } from "@/lib/hooks/use-storyboards";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/lib/stores/toast-store";
 import { formatDuration } from "@/lib/utils/format";
 
 /** Reorders via move-up/move-down rather than full drag-and-drop — no extra
  * dependency, same end result (calls the backend's scenes/reorder
  * endpoint), and simpler to keep accessible. */
-export function SceneTimeline({ storyboardId }: { storyboardId: string }) {
+export function SceneTimeline({ storyboardId, projectId }: { storyboardId: string; projectId: string }) {
   const { data: scenes, isLoading } = useScenes(storyboardId);
   const reorder = useReorderScenes(storyboardId);
+  const generateImage = useGenerateSceneImage(projectId);
+  const toast = useToast();
 
   if (isLoading) return <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Loading…</p>;
   if (!scenes || scenes.length === 0) {
@@ -51,6 +54,18 @@ export function SceneTimeline({ storyboardId }: { storyboardId: string }) {
               onClick={() => move(index, 1)}
             >
               Move down
+            </Button>
+            <Button
+              size="sm"
+              isLoading={generateImage.isPending && generateImage.variables === scene.id}
+              onClick={() =>
+                generateImage.mutate(scene.id, {
+                  onSuccess: () => toast.success("Image generated"),
+                  onError: () => toast.error("Image generation failed"),
+                })
+              }
+            >
+              Generate image
             </Button>
           </div>
         </Card>
