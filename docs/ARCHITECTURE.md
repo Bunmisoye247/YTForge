@@ -180,28 +180,50 @@ class LLMProvider(Protocol):
     async def complete(self, req: LLMRequest) -> LLMResponse: ...
     async def stream(self, req: LLMRequest) -> AsyncIterator[LLMChunk]: ...
     async def embed(self, texts: list[str], model: str) -> list[Vector]: ...
+    async def health_check(self) -> None: ...          # raises on failure
 
 class ImageProvider(Protocol):
     async def generate(self, req: ImageRequest) -> list[ImageAsset]: ...
+    async def health_check(self) -> None: ...
 
 class VideoProvider(Protocol):
     async def generate(self, req: VideoRequest) -> VideoJob: ...      # async jobs
     async def poll(self, job: VideoJob) -> VideoJobStatus: ...
+    async def health_check(self) -> None: ...
 
 class TTSProvider(Protocol):
     async def synthesize(self, req: TTSRequest) -> AudioAsset: ...    # + timestamps
     async def clone_voice(self, req: VoiceCloneRequest) -> VoiceProfile: ...  # approval-gated
+    async def health_check(self) -> None: ...
 
 class MusicProvider(Protocol):
     async def generate(self, req: MusicRequest) -> AudioAsset: ...
+    async def health_check(self) -> None: ...
 ```
+
+Every adapter implements `health_check()` as a cheap, short-timeout ping
+(model-list endpoint where one is documented, a bare-root connectivity
+probe otherwise) — `ProviderHttpClient.ping()` raises the same
+`ProviderError` hierarchy the real calls use, so a health check and a real
+call fail identically. `VideoProductionWorkflow`'s pre-flight step (§5.1)
+is the only current caller: it dry-runs each route's primary/fallback
+chain against `health_check()` instead of a real request.
 
 ### 4.2 Adapters (infrastructure layer)
 
-LLM: `openai`, `anthropic`, `gemini`, `ollama` (Qwen/Llama/DeepSeek/Mistral),
-`lmstudio` (OpenAI-compatible). Image: `flux_api`, `sdxl_diffusers`, `comfyui`,
-`a1111`. Video: `veo`, `runway`, `kling`, `luma`, `hailuo`. TTS: `elevenlabs`,
-`playht`, `azure_tts`, `kokoro`, `piper`. Music: `suno`, `udio`, `mubert`.
+LLM: `openai`, `anthropic`, `gemini`, `groq` (free-tier, OpenAI-compatible),
+`ollama` (Qwen/Llama/DeepSeek/Mistral), `lmstudio` (OpenAI-compatible).
+Image: `flux_api`, `pollinations` (free, keyless), `sdxl_diffusers`,
+`comfyui`, `a1111`. Video: `veo`, `runway`, `kling`, `luma`, `hailuo`. TTS:
+`elevenlabs`, `playht`, `azure_tts`, `kokoro` (local, CPU-friendly),
+`piper`. Music: `suno`, `udio`, `mubert`.
+
+Which adapter is *primary* per route is a deployment choice, not an
+architectural one — `config/default.yaml` picks free/local-first defaults
+(Pollinations for images, Kokoro for voice, small Ollama models for
+routes that don't need frontier quality) to keep a GPU-constrained box
+running without paid keys; swap the `primary`/`fallback` order for a box
+with more VRAM or a paid-API budget instead.
 
 ### 4.3 ModelRouter
 
@@ -233,7 +255,7 @@ in a `model_registry` table and surface in the dashboard Settings page.
 Stages as activities, each with tailored retry policy and timeouts:
 
 ```
-TrendDiscovery → Research → ScriptWrite → FactCheck ──(flags?)──► HumanReview
+Preflight → Research → ScriptWrite → FactCheck ──(flags?)──► HumanReview
       │                                        │pass
       ▼                                        ▼
   (standalone cron)                       Storyboard
@@ -255,6 +277,17 @@ TrendDiscovery → Research → ScriptWrite → FactCheck ──(flags?)──�
                                                ▼
                                   Analytics collection (cron child, 30 days)
 ```
+
+Preflight runs first, before Research — it resolves every route
+`VideoProductionWorkflow` will need (script_writing, image_generation,
+video_generation, voice_synthesis, …), health-checks each route's
+primary/fallback chain concurrently, and fails the run immediately with a
+per-route error if a route has *no* healthy candidate at all. This is the
+same failure a misconfigured or offline provider would otherwise only
+surface as `AllProvidersExhaustedError` minutes into a real run, at the
+expensive media-generation fan-out — pre-flight just runs the same
+resolution against `health_check()` instead of a real request, in
+parallel, before any billable/GPU work starts.
 
 Design details:
 - **Fan-out/fan-in per scene**: image and clip generation run as parallel

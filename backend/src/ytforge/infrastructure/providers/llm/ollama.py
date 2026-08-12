@@ -76,3 +76,7 @@ class OllamaProvider:
                 body = await self._client.post_json("/api/embeddings", {"model": model, "prompt": text})
                 vectors.append(body["embedding"])
             return vectors
+
+    async def health_check(self) -> None:
+        # ARCHITECTURE.md §4.3's documented discovery endpoint.
+        await self._client.ping("/api/tags")

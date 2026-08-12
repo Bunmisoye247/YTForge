@@ -20,6 +20,7 @@ from ytforge.infrastructure.providers.image import (
     A1111Provider,
     ComfyUIProvider,
     FluxApiProvider,
+    PollinationsProvider,
     SdxlDiffusersProvider,
 )
 from ytforge.infrastructure.providers.llm import (
@@ -62,7 +63,7 @@ def build_fake_registries() -> ProviderRegistries:
     still flows into the request, only the transport is faked."""
     return ProviderRegistries(
         llm={name: FakeLLMProvider() for name in ("openai", "anthropic", "gemini", "groq", "ollama", "lmstudio")},
-        image={name: FakeImageProvider() for name in ("flux_api", "sdxl_diffusers", "comfyui", "a1111")},
+        image={name: FakeImageProvider() for name in ("flux_api", "pollinations", "sdxl_diffusers", "comfyui", "a1111")},
         video={name: FakeVideoProvider() for name in ("veo", "runway", "kling", "luma", "hailuo")},
         tts={name: FakeTTSProvider() for name in ("elevenlabs", "playht", "azure_tts", "kokoro", "piper")},
         music={name: FakeMusicProvider() for name in ("suno", "udio", "mubert")},
@@ -112,6 +113,13 @@ def build_real_registries(
             storage,
             raw_assets_bucket,
             providers.flux_api.cost_per_unit_usd,
+        )
+    if providers.pollinations.is_configured and providers.pollinations.base_url:
+        registries.image["pollinations"] = PollinationsProvider(
+            providers.pollinations.base_url,
+            storage,
+            raw_assets_bucket,
+            providers.pollinations.api_key.get_secret_value() if providers.pollinations.api_key else None,
         )
     if providers.sdxl_diffusers.is_configured and providers.sdxl_diffusers.base_url:
         registries.image["sdxl_diffusers"] = SdxlDiffusersProvider(

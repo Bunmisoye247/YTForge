@@ -45,3 +45,7 @@ class LMStudioProvider:
         async with record_provider_call("lmstudio", "llm.embed"):
             body = await self._client.post_json("/v1/embeddings", {"model": model, "input": texts})
             return [item["embedding"] for item in body["data"]]
+
+    async def health_check(self) -> None:
+        # ARCHITECTURE.md §4.3's documented discovery endpoint.
+        await self._client.ping("/v1/models")

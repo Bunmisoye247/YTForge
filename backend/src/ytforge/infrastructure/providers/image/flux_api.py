@@ -68,6 +68,12 @@ class FluxApiProvider:
         await self._storage.put_object(self._bucket, key, data, "image/png")
         return key
 
+    async def health_check(self) -> None:
+        # BFL has no documented lightweight status endpoint — a bare-root
+        # probe at least confirms the host is reachable and, via any 401/403,
+        # that the key is rejected. # verify against current provider docs.
+        await self._client.ping("/")
+
     async def _poll(self, request_id: str) -> str:
         elapsed = 0.0
         while elapsed < _POLL_TIMEOUT_S:

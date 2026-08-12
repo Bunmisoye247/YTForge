@@ -63,6 +63,9 @@ class VeoProvider:
         await self._storage.put_object(self._bucket, key, data, "video/mp4")
         return key
 
+    async def health_check(self) -> None:
+        await self._client.ping("/models", params={"key": self._api_key})
+
     def _estimate_cost(self, duration_seconds: float) -> float | None:
         if self._cost_per_second is None:
             return None

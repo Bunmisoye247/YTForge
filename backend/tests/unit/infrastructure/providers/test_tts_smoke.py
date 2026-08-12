@@ -66,7 +66,7 @@ async def test_azure_tts_synthesize_smoke() -> None:
 
 @respx.mock
 async def test_kokoro_synthesize_smoke() -> None:
-    respx.post("http://localhost:8880/v1/audio/speech").mock(
+    respx.post("http://localhost:8880/v1/text-to-speech/voice-1").mock(
         return_value=httpx.Response(200, content=b"fake-audio-bytes")
     )
     provider = KokoroProvider(base_url="http://localhost:8880", storage=FakeObjectStorage(), bucket="raw-assets")

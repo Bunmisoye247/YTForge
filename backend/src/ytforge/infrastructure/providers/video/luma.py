@@ -60,6 +60,11 @@ class LumaProvider:
         await self._storage.put_object(self._bucket, key, data, "video/mp4")
         return key
 
+    async def health_check(self) -> None:
+        # No documented lightweight status endpoint — bare-root probe.
+        # # verify against current provider docs.
+        await self._client.ping("/")
+
     def _estimate_cost(self, duration_seconds: float) -> float | None:
         if self._cost_per_second is None:
             return None

@@ -48,11 +48,14 @@ ytforge/
 │   │   │   ├── cache/                  # Redis cache, rate limiters, locks
 │   │   │   ├── events/                 # outbox writer, relay, Redis Streams pub/sub, DLQ
 │   │   │   ├── providers/
-│   │   │   │   ├── llm/                # openai, anthropic, gemini, ollama, lmstudio, router
-│   │   │   │   ├── image/              # flux, sdxl, comfyui, a1111
+│   │   │   │   ├── llm/                # openai, anthropic, gemini, groq, ollama, lmstudio, router
+│   │   │   │   ├── image/              # flux, pollinations, sdxl, comfyui, a1111
 │   │   │   │   ├── video/              # veo, runway, kling, luma, hailuo
 │   │   │   │   ├── tts/                # elevenlabs, playht, azure, kokoro, piper
 │   │   │   │   └── music/              # suno, udio, mubert
+│   │   │   │   # every adapter implements health_check() (its Protocol's
+│   │   │   │   # method) — see interfaces/activities/pipeline_activities.py's
+│   │   │   │   # preflight_check activity, the only current caller
 │   │   │   ├── external/
 │   │   │   │   ├── youtube/            # Data API v3 + Analytics API + quota ledger
 │   │   │   │   └── trends_sources/     # gtrends, reddit, hn, x, rss, newsapi

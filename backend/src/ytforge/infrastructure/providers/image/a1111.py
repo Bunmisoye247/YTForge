@@ -48,3 +48,6 @@ class A1111Provider:
                     ImageAsset(object_key=key, content_type="image/png", model=req.model, latency_ms=0, cost_usd=0.0)
                 )
             return assets
+
+    async def health_check(self) -> None:
+        await self._client.ping("/sdapi/v1/sd-models")

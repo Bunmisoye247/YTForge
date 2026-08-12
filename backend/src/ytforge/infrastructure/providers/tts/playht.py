@@ -63,6 +63,9 @@ class PlayHTProvider:
             )
             return ClonedVoice(provider_voice_id=body["id"], model="PlayHT2.0")
 
+    async def health_check(self) -> None:
+        await self._client.ping("/voices")
+
     def _estimate_cost(self, char_count: int) -> float | None:
         if self._cost_per_1k_chars is None:
             return None

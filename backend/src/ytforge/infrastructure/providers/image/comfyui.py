@@ -17,21 +17,39 @@ _POLL_INTERVAL_S = 2.0
 _POLL_TIMEOUT_S = 180.0
 
 
+_DEFAULT_NEGATIVE_PROMPT = "blurry, low quality, watermark, text artifacts, deformed"
+
+
 def _minimal_txt2img_workflow(req: ImageRequest) -> dict[str, Any]:
-    """A minimal KSampler/CheckpointLoader/CLIPTextEncode/SaveImage graph —
-    ComfyUI's `/prompt` endpoint takes a full node graph, not a flat
-    request; real deployments swap this for a saved workflow JSON export.
-    # verify node field names against your ComfyUI version."""
+    """A KSampler/CheckpointLoader/CLIPTextEncode/SaveImage graph matching
+    a validated SDXL txt2img export (node ids/roles: 3=sampler,
+    4=checkpoint, 5=latent size, 6=positive prompt, 7=negative prompt,
+    8=VAE decode, 9=save) — ComfyUI's `/prompt` endpoint takes a full node
+    graph, not a flat request; a real deployment can swap this for its own
+    saved workflow JSON if it needs a different sampler/LoRA setup."""
     return {
         "3": {
             "class_type": "KSampler",
-            "inputs": {"seed": 0, "steps": 20, "cfg": 7.0, "model": ["4", 0], "positive": ["6", 0],
-                       "negative": ["7", 0], "latent_image": ["5", 0]},
+            "inputs": {
+                "seed": 0,
+                "steps": 25,
+                "cfg": 7.0,
+                "sampler_name": "dpmpp_2m",
+                "scheduler": "karras",
+                "denoise": 1.0,
+                "model": ["4", 0],
+                "positive": ["6", 0],
+                "negative": ["7", 0],
+                "latent_image": ["5", 0],
+            },
         },
         "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": req.model}},
         "5": {"class_type": "EmptyLatentImage", "inputs": {"width": req.width, "height": req.height}},
         "6": {"class_type": "CLIPTextEncode", "inputs": {"text": req.prompt, "clip": ["4", 1]}},
-        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": req.negative_prompt or "", "clip": ["4", 1]}},
+        "7": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": req.negative_prompt or _DEFAULT_NEGATIVE_PROMPT, "clip": ["4", 1]},
+        },
         "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
         "9": {"class_type": "SaveImage", "inputs": {"images": ["8", 0]}},
     }
@@ -76,6 +94,9 @@ class ComfyUIProvider:
         key = f"comfyui/{digest}.png"
         await self._storage.put_object(self._bucket, key, data, "image/png")
         return key
+
+    async def health_check(self) -> None:
+        await self._client.ping("/system_stats")
 
     async def _poll(self, prompt_id: str) -> list[str]:
         elapsed = 0.0

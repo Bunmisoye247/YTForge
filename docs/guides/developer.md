@@ -65,18 +65,31 @@ so adding real e2e specs needs no workflow changes.
 ## Adding a new provider adapter
 
 1. Implement the matching `Protocol` from `application/ports/providers/`
-   in `infrastructure/providers/{category}/{name}.py`, using
-   `httpx.AsyncClient` and wrapping the call in
+   in `infrastructure/providers/{category}/{name}.py`. Prefer
+   `infrastructure.providers.http_base.ProviderHttpClient` over a bare
+   `httpx.AsyncClient` — it wraps HTTP status codes *and* raw connection
+   failures into the shared `ProviderError` hierarchy, which is what lets
+   `ConfigDrivenModelRouter`'s fallback loop correctly skip an unreachable
+   provider instead of crashing the whole route (a bare `httpx.AsyncClient`
+   only gets you the status-code half of that). Wrap the call in
    `infrastructure.telemetry.provider_metrics.record_provider_call` (this
    is what gives you cost/latency/error metrics and a trace span for free
    — see the [Deployment guide](deployment.md#observability) for where
-   those end up).
-2. Register it in `infrastructure/providers/router.py`'s
-   `ConfigDrivenModelRouter` construction and add its config block to
-   `config/default.yaml`'s `providers:` section + a key var line in
-   `.env.example`.
+   those end up). Every port also requires a `health_check(self) -> None`
+   method: a cheap, short-timeout call (`ProviderHttpClient.ping(path)` if
+   you're using it) that raises on failure and returns `None` on success —
+   this is what `VideoProductionWorkflow`'s pre-flight step calls before
+   any expensive pipeline work starts (see
+   `interfaces/activities/pipeline_activities.py`'s `_evaluate_preflight`).
+2. Register it in `infrastructure/providers/registry.py`'s
+   `build_real_registries` (and `build_fake_registries` if you want the
+   fake provider set to include its key too), add its `ProviderSettings`
+   field to `ProvidersSettings` in `infrastructure/config/settings.py`, and
+   add its config block to `config/default.yaml`'s `providers:` section +
+   a key var line in `.env.example`.
 3. Add a `respx`-mocked unit test under
-   `tests/unit/infrastructure/providers/`.
+   `tests/unit/infrastructure/providers/`, including a case for
+   `health_check()` (success and failure).
 4. Never call the adapter directly from an agent or use case — agents only
    go through `ModelRouter`.
 

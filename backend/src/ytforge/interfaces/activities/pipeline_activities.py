@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import date as date_
 from decimal import Decimal
@@ -22,7 +23,7 @@ from ytforge.application.use_cases.videos import (
     request_publish_approval,
 )
 from ytforge.domain.enums import ApprovalKind, JobStatus
-from ytforge.infrastructure.config.settings import get_settings
+from ytforge.infrastructure.config.settings import ModelRoute, Settings, get_settings
 from ytforge.infrastructure.db.session import get_session_factory
 from ytforge.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 from ytforge.infrastructure.external.google.oauth_client import GoogleOAuthClient
@@ -32,6 +33,12 @@ from ytforge.infrastructure.external.youtube.analytics_api import (
     AnalyticsMetricsResult,
     YouTubeAnalyticsApiClient,
 )
+from ytforge.infrastructure.providers.registry import (
+    ProviderRegistries,
+    build_fake_registries,
+    build_real_registries,
+)
+from ytforge.infrastructure.storage.minio_storage import MinioObjectStorage
 from ytforge.infrastructure.telemetry.pipeline_metrics import job_failures
 from ytforge.interfaces.activity_dto import (
     CheckBudgetActivityInput,
@@ -44,6 +51,8 @@ from ytforge.interfaces.activity_dto import (
     IngestAnalyticsActivityInput,
     IngestAnalyticsActivityOutput,
     OrphanAssetsActivityInput,
+    PreflightCheckActivityInput,
+    PreflightCheckActivityOutput,
     RecordJobStartedActivityInput,
     RecordJobStartedActivityOutput,
     RequestApprovalActivityInput,
@@ -52,6 +61,56 @@ from ytforge.interfaces.activity_dto import (
     RequestPublishApprovalActivityOutput,
     UpdateJobStatusActivityInput,
 )
+
+# route_name -> which ProviderRegistries collection resolves it (mirrors
+# ConfigDrivenModelRouter's per-capability methods: embeddings still goes
+# through `.llm` since embed() is part of LLMProvider, not a separate
+# registry). Only the routes VideoProductionWorkflow's agents actually
+# reference (writer/image/video agents' prompt-refinement step also uses
+# script_writing, not a dedicated route) — trend_scoring/analytics_insights/
+# music_generation belong to other workflows, not this one.
+_PREFLIGHT_ROUTES: dict[str, str] = {
+    "research_summary": "llm",
+    "embeddings": "llm",
+    "script_writing": "llm",
+    "fact_checking": "llm",
+    "storyboard": "llm",
+    "voice_direction": "llm",
+    "seo": "llm",
+    "image_generation": "image",
+    "video_generation": "video",
+    "voice_synthesis": "tts",
+}
+
+
+def _split_provider_model(provider_model: str) -> tuple[str, str]:
+    provider, _, model = provider_model.partition("/")
+    return provider, model
+
+
+def _build_registries(settings: Settings) -> ProviderRegistries:
+    if settings.models.provider_set == "fake":
+        return build_fake_registries()
+    object_storage = MinioObjectStorage(
+        settings.minio.endpoint,
+        settings.minio.access_key,
+        settings.minio.secret_key.get_secret_value(),
+        settings.minio.secure,
+    )
+    return build_real_registries(settings.providers, object_storage, settings.minio.buckets["raw_assets"])
+
+
+async def _check_one_provider(registry_kind: str, provider_key: str, registries: ProviderRegistries) -> str | None:
+    """Returns None on success, else a short reason string — never raises,
+    so one provider's failure can't break the concurrent gather."""
+    provider = getattr(registries, registry_kind).get(provider_key)
+    if provider is None:
+        return "not configured"
+    try:
+        await provider.health_check()
+    except Exception as exc:  # reduced to a message and returned, not swallowed
+        return str(exc)
+    return None
 
 
 @activity.defn(name="record_job_started")
@@ -254,3 +313,62 @@ async def ingest_analytics_activity(data: IngestAnalyticsActivityInput) -> Inges
             ),
         )
     return IngestAnalyticsActivityOutput(ingested=True)
+
+
+async def _evaluate_preflight(routes: dict[str, ModelRoute], registries: ProviderRegistries) -> PreflightCheckActivityOutput:
+    """Dry-runs the exact same primary/fallback resolution
+    ConfigDrivenModelRouter uses at call time, but against each candidate's
+    health_check() instead of a real (expensive) generation call. A route
+    is healthy if ANY candidate in its chain is both configured and
+    reachable — matching the router's own "first one that works"
+    semantics, so pre-flight doesn't reject a run the router would have
+    happily served via a fallback. Only fails when a route has NO healthy
+    candidate at all — the exact case that would otherwise surface as an
+    expensive-stage failure (AllProvidersExhaustedError) minutes into a
+    real run instead of seconds into this one. Pure aside from the
+    `health_check()` calls themselves — no `get_settings()` — so tests can
+    hand it fake routes/registries directly."""
+    # Dedup: the same provider (e.g. anthropic) appears in several routes'
+    # chains — health-check each distinct (registry, provider) pair once,
+    # concurrently, and let every route that references it reuse the result.
+    candidates: dict[tuple[str, str], list[str]] = {}
+    for route_name, registry_kind in _PREFLIGHT_ROUTES.items():
+        route = routes.get(route_name)
+        if route is None:
+            continue
+        for provider_model in (route.primary, *route.fallback):
+            provider_key, _ = _split_provider_model(provider_model)
+            candidates.setdefault((registry_kind, provider_key), []).append(route_name)
+
+    keys = list(candidates.keys())
+    results = await asyncio.gather(
+        *(_check_one_provider(registry_kind, provider_key, registries) for registry_kind, provider_key in keys)
+    )
+    health: dict[tuple[str, str], str | None] = dict(zip(keys, results, strict=True))
+
+    errors: list[str] = []
+    for route_name, registry_kind in _PREFLIGHT_ROUTES.items():
+        route = routes.get(route_name)
+        if route is None:
+            errors.append(f"{route_name}: no route configured")
+            continue
+        attempts: list[str] = []
+        healthy = False
+        for provider_model in (route.primary, *route.fallback):
+            provider_key, _ = _split_provider_model(provider_model)
+            reason = health[(registry_kind, provider_key)]
+            if reason is None:
+                healthy = True
+                break
+            attempts.append(f"{provider_key}: {reason}")
+        if not healthy:
+            errors.append(f"{route_name}: all candidates unhealthy ({'; '.join(attempts)})")
+
+    return PreflightCheckActivityOutput(ok=not errors, errors=errors)
+
+
+@activity.defn(name="preflight_check")
+async def preflight_check_activity(data: PreflightCheckActivityInput) -> PreflightCheckActivityOutput:
+    settings = get_settings()
+    registries = _build_registries(settings)
+    return await _evaluate_preflight(settings.models.routes, registries)

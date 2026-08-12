@@ -16,6 +16,8 @@ from ytforge.interfaces.activity_dto import (
     CreateVideoActivityOutput,
     EmitEventActivityInput,
     OrphanAssetsActivityInput,
+    PreflightCheckActivityInput,
+    PreflightCheckActivityOutput,
     RecordJobStartedActivityInput,
     RecordJobStartedActivityOutput,
     RequestApprovalActivityInput,
@@ -143,6 +145,16 @@ class VideoProductionWorkflow:
         job_id = job.job_id
 
         try:
+            await self._emit("PipelineStageStarted", data.project_id, {"stage": "preflight"})
+            preflight: PreflightCheckActivityOutput = await workflow.execute_activity(
+                "preflight_check",
+                PreflightCheckActivityInput(project_id=data.project_id),
+                start_to_close_timeout=_QUICK_TIMEOUT,
+                result_type=PreflightCheckActivityOutput,
+            )
+            if not preflight.ok:
+                return await self._fail(job_id, f"preflight check failed: {'; '.join(preflight.errors)}")
+
             await self._emit("PipelineStageStarted", data.project_id, {"stage": "research"})
             await self._run_agent("research", data.project_id, {"topic": data.topic})
 

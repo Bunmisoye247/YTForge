@@ -89,6 +89,9 @@ class ElevenLabsProvider:
             )
             return ClonedVoice(provider_voice_id=body["voice_id"], model="eleven_multilingual_v2")
 
+    async def health_check(self) -> None:
+        await self._client.ping("/user")
+
     def _estimate_cost(self, char_count: int) -> float | None:
         if self._cost_per_1k_chars is None:
             return None

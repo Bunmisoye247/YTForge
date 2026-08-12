@@ -97,6 +97,11 @@ class AnthropicProvider:
             "'embeddings' capability to openai or ollama instead."
         )
 
+    async def health_check(self) -> None:
+        # Anthropic's Models API (https://docs.anthropic.com/en/api/models-list)
+        # — verify against current docs.
+        await self._client.ping("/models")
+
     def _estimate_cost(self, total_tokens: int) -> float | None:
         if self._cost_per_1k is None:
             return None

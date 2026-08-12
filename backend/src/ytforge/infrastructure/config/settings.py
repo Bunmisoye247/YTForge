@@ -136,6 +136,7 @@ class ProvidersSettings(BaseModel):
     ollama: ProviderSettings = ProviderSettings()
     lmstudio: ProviderSettings = ProviderSettings()
     flux_api: ProviderSettings = ProviderSettings()
+    pollinations: ProviderSettings = ProviderSettings()
     sdxl_diffusers: ProviderSettings = ProviderSettings()
     comfyui: ProviderSettings = ProviderSettings()
     a1111: ProviderSettings = ProviderSettings()

@@ -70,3 +70,8 @@ class UdioProvider:
         key = f"udio/{digest}.mp3"
         await self._storage.put_object(self._bucket, key, data, "audio/mpeg")
         return key
+
+    async def health_check(self) -> None:
+        # No documented lightweight status endpoint — bare-root probe.
+        # # verify against current provider docs.
+        await self._client.ping("/")

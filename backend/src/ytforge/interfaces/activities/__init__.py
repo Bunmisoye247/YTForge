@@ -11,6 +11,7 @@ from ytforge.interfaces.activities.pipeline_activities import (
     fetch_candidate_topics_activity,
     ingest_analytics_activity,
     orphan_assets_activity,
+    preflight_check_activity,
     record_job_started_activity,
     request_approval_activity,
     request_publish_approval_activity,
@@ -29,6 +30,7 @@ ALL_ACTIVITIES: list[Callable[..., Any]] = [
     check_budget_activity,
     fetch_candidate_topics_activity,
     ingest_analytics_activity,
+    preflight_check_activity,
 ]
 
 __all__ = [
@@ -39,6 +41,7 @@ __all__ = [
     "fetch_candidate_topics_activity",
     "ingest_analytics_activity",
     "orphan_assets_activity",
+    "preflight_check_activity",
     "record_job_started_activity",
     "request_approval_activity",
     "request_publish_approval_activity",

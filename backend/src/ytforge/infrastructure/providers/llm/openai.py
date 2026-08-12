@@ -82,6 +82,9 @@ class OpenAIProvider:
             body = await self._client.post_json("/embeddings", {"model": model, "input": texts})
             return [item["embedding"] for item in body["data"]]
 
+    async def health_check(self) -> None:
+        await self._client.ping("/models")
+
     def _estimate_cost(self, total_tokens: int) -> float | None:
         if self._cost_per_1k is None:
             return None

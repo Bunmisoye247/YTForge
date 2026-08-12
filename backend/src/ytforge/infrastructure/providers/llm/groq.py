@@ -83,6 +83,9 @@ class GroqProvider:
     async def embed(self, texts: list[str], model: str) -> list[Vector]:
         raise ProviderRequestError("groq", "Groq has no embeddings endpoint")
 
+    async def health_check(self) -> None:
+        await self._client.ping("/models")
+
     def _estimate_cost(self, total_tokens: int) -> float | None:
         if self._cost_per_1k is None:
             return None

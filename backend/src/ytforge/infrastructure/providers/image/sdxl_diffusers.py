@@ -46,3 +46,8 @@ class SdxlDiffusersProvider:
                     ImageAsset(object_key=key, content_type="image/png", model=req.model, latency_ms=0, cost_usd=0.0)
                 )
             return assets
+
+    async def health_check(self) -> None:
+        # No standard status endpoint for a custom wrapper — bare-root
+        # probe. # verify against your actual server wrapper.
+        await self._client.ping("/")

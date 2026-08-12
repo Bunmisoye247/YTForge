@@ -6,8 +6,10 @@ import httpx
 
 from ytforge.application.dto.tts import AudioAsset, ClonedVoice, TTSRequest, VoiceCloneRequest
 from ytforge.application.ports.providers.object_storage import ObjectStorage
-from ytforge.infrastructure.providers.errors import ProviderRequestError
+from ytforge.infrastructure.providers.errors import ProviderAuthError, ProviderRequestError
 from ytforge.infrastructure.telemetry.provider_metrics import record_provider_call
+
+_HEALTH_TIMEOUT = httpx.Timeout(connect=3.0, read=5.0, write=3.0, pool=3.0)
 
 
 class AzureTtsProvider:
@@ -66,6 +68,22 @@ class AzureTtsProvider:
             "Custom Voice training pipeline, not a simple REST call — not "
             "implemented in this pass."
         )
+
+    async def health_check(self) -> None:
+        # Documented voices-list endpoint — cheap, requires the same
+        # subscription key as synthesis.
+        try:
+            async with httpx.AsyncClient(base_url=self._base_url, timeout=_HEALTH_TIMEOUT) as client:
+                response = await client.get(
+                    "/cognitiveservices/voices/list",
+                    headers={"Ocp-Apim-Subscription-Key": self._api_key},
+                )
+        except httpx.HTTPError as exc:
+            raise ProviderRequestError("azure_tts", f"health check failed: {exc}") from exc
+        if response.status_code in (401, 403):
+            raise ProviderAuthError("azure_tts", f"HTTP {response.status_code}: {response.text[:200]}")
+        if response.status_code >= 400:
+            raise ProviderRequestError("azure_tts", f"HTTP {response.status_code}: {response.text[:200]}")
 
     def _estimate_cost(self, char_count: int) -> float | None:
         if self._cost_per_1k_chars is None:

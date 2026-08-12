@@ -131,3 +131,14 @@ class IngestAnalyticsActivityInput:
 @dataclass(frozen=True, slots=True)
 class IngestAnalyticsActivityOutput:
     ingested: bool
+
+
+@dataclass(frozen=True, slots=True)
+class PreflightCheckActivityInput:
+    project_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class PreflightCheckActivityOutput:
+    ok: bool
+    errors: list[str] = field(default_factory=list)

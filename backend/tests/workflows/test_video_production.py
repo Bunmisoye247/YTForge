@@ -17,6 +17,7 @@ from ytforge.domain.enums import ApprovalStatus, VoiceProfileStatus
 from ytforge.infrastructure.config.settings import get_settings
 from ytforge.infrastructure.db.session import get_engine, get_session_factory
 from ytforge.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
+from ytforge.infrastructure.providers.fakeprovider.provider import FakeTTSProvider
 from ytforge.interfaces.activities import ALL_ACTIVITIES
 from ytforge.interfaces.workflows import VideoProductionWorkflow, VideoProductionWorkflowInput
 
@@ -198,3 +199,43 @@ async def test_video_production_workflow_stops_when_publish_rejected() -> None:
 
     assert not result.ok
     assert result.error == "publish rejected"
+
+
+async def test_video_production_workflow_fails_fast_when_a_required_provider_is_unhealthy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Breaking FakeTTSProvider.health_check breaks BOTH voice_synthesis
+    candidates at once (primary kokoro and fallback elevenlabs are both
+    FakeTTSProvider instances under the fake provider set) — the exact
+    "route has zero healthy candidates" case pre-flight exists to catch.
+    Asserts the workflow fails at the pre-flight stage itself, before
+    research/writer/etc ever run — not later, expensively, at the
+    media-generation fan-out where this same misconfiguration would
+    otherwise first surface as AllProvidersExhaustedError."""
+    try:
+        project_id, user_id = await _seed_project()
+    except Exception as exc:
+        pytest.skip(f"no reachable Postgres for workflow test: {exc}")
+
+    async def _unhealthy(self: FakeTTSProvider) -> None:
+        raise RuntimeError("simulated TTS outage")
+
+    monkeypatch.setattr(FakeTTSProvider, "health_check", _unhealthy)
+
+    async with (
+        await WorkflowEnvironment.start_time_skipping() as env,
+        Worker(env.client, task_queue=_TASK_QUEUE, workflows=[VideoProductionWorkflow], activities=ALL_ACTIVITIES),
+        Worker(env.client, task_queue=_RENDERER_TASK_QUEUE, activities=ALL_ACTIVITIES),
+    ):
+        handle = await env.client.start_workflow(
+            VideoProductionWorkflow.run,
+            VideoProductionWorkflowInput(project_id=project_id, topic="on-device AI", requested_by_user_id=user_id),
+            id=f"test-video-production-{uuid.uuid4().hex}",
+            task_queue=_TASK_QUEUE,
+        )
+        result = await handle.result()
+
+    assert not result.ok
+    assert result.error is not None
+    assert "preflight" in result.error
+    assert "voice_synthesis" in result.error

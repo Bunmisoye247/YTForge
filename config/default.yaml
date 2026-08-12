@@ -35,18 +35,39 @@ observability:
 models:
   provider_set: real
   routes:
-    script_writing: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, ollama/qwen2.5:72b, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
+    # script_writing: anthropic primary, ollama/qwen2.5:3b as the direct
+    # fallback (per operator request — a 4GB-VRAM box can't run the old
+    # qwen2.5:72b/llama3.3:70b fallbacks this route and seo/trend_scoring
+    # used to reference). Cloud fallbacks stay behind it rather than being
+    # dropped — deviation flagged per CLAUDE.md: the request named ollama
+    # as "the" fallback but didn't say to remove the free cloud resilience
+    # (gemini/groq) added earlier, so it's kept as further-fallback, not
+    # instead-of.
+    script_writing: {primary: anthropic/claude-sonnet-4-6, fallback: [ollama/qwen2.5:3b, openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
     fact_checking: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
     research_summary: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
     storyboard: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
-    seo: {primary: ollama/llama3.3:70b, fallback: [gemini/gemini-flash-latest, openai/gpt-4.1, groq/llama-3.3-70b-versatile]}
-    trend_scoring: {primary: ollama/llama3.3:70b, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
+    # seo (titles/tags/descriptions/chapters — SEOAgent's single JSON
+    # output, not separate routes): ollama/qwen2.5:3b per operator request,
+    # sized for 4GB VRAM (was llama3.3:70b).
+    seo: {primary: ollama/qwen2.5:3b, fallback: [gemini/gemini-flash-latest, openai/gpt-4.1, groq/llama-3.3-70b-versatile]}
+    # trend_scoring wasn't named explicitly but had the exact same
+    # oversized-for-4GB-VRAM primary (llama3.3:70b) as seo — fixed for the
+    # same reason, flagged as the same deviation category.
+    trend_scoring: {primary: ollama/qwen2.5:3b, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
     voice_direction: {primary: anthropic/claude-sonnet-4-6, fallback: [openai/gpt-4.1, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
     analytics_insights: {primary: openai/gpt-4.1, fallback: [anthropic/claude-sonnet-4-6, gemini/gemini-flash-latest, groq/llama-3.3-70b-versatile]}
     embeddings: {primary: openai/text-embedding-3-large, fallback: [gemini/gemini-embedding-001]}
-    image_generation: {primary: flux_api/flux-pro-1.1, fallback: [comfyui/sdxl, a1111/sdxl]}
+    # image_generation: Pollinations primary (free, keyless, no local VRAM
+    # cost since it's a remote API) per operator request; ComfyUI (local,
+    # GPU-bound — the operator's own 4GB card) and a1111 as free fallbacks
+    # ahead of the paid flux_api last resort.
+    image_generation: {primary: pollinations/flux, fallback: [comfyui/sdxl, a1111/sdxl, flux_api/flux-pro-1.1]}
     video_generation: {primary: runway/gen4.5, fallback: [luma/dream-machine, kling/v1]}
-    voice_synthesis: {primary: elevenlabs/eleven_multilingual_v2, fallback: [playht/PlayHT2.0]}
+    # voice_synthesis: Kokoro (local, CPU — explicitly requested to avoid
+    # loading the 4GB GPU) primary; ElevenLabs fallback as requested,
+    # PlayHT stays as a further cloud fallback.
+    voice_synthesis: {primary: kokoro/kokoro, fallback: [elevenlabs/eleven_multilingual_v2, playht/PlayHT2.0]}
     music_generation: {primary: suno/v3, fallback: [udio/v1, mubert/v1]}
   discovery:
     ollama: {base_url: http://localhost:11434, auto_detect: true}
@@ -86,6 +107,9 @@ providers:
   ollama: {base_url: http://localhost:11434}
   lmstudio: {base_url: http://localhost:1234}
   flux_api: {api_key: "${FLUX_API_KEY}"}
+  # Free/keyless by default (base_url alone makes is_configured true); the
+  # optional token just raises rate limits and drops the watermark.
+  pollinations: {base_url: https://image.pollinations.ai, api_key: "${POLLINATIONS_API_KEY}"}
   sdxl_diffusers: {base_url: http://localhost:7860}
   comfyui: {base_url: http://localhost:8188}
   a1111: {base_url: http://localhost:7861}

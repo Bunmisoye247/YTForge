@@ -145,6 +145,9 @@ class FakeLLMProvider:
     async def embed(self, texts: list[str], model: str) -> list[Vector]:
         return [[float(b) / 255 for b in hashlib.sha256(t.encode()).digest()[:8]] for t in texts]
 
+    async def health_check(self) -> None:
+        return None
+
 
 class FakeImageProvider:
     async def generate(self, req: ImageRequest) -> list[ImageAsset]:
@@ -159,6 +162,9 @@ class FakeImageProvider:
             for i in range(req.count)
         ]
 
+    async def health_check(self) -> None:
+        return None
+
 
 class FakeVideoProvider:
     async def generate(self, req: VideoRequest) -> VideoJob:
@@ -171,6 +177,9 @@ class FakeVideoProvider:
             latency_ms=1,
             cost_usd=0.0,
         )
+
+    async def health_check(self) -> None:
+        return None
 
 
 class FakeTTSProvider:
@@ -194,6 +203,9 @@ class FakeTTSProvider:
 
     async def clone_voice(self, req: VoiceCloneRequest) -> ClonedVoice:
         return ClonedVoice(provider_voice_id=f"fake-voice-{_deterministic_digest(req.name)}", model="fake")
+
+    async def health_check(self) -> None:
+        return None
 
 
 class FakeSearchProvider:
@@ -225,3 +237,6 @@ class FakeMusicProvider:
             latency_ms=1,
             cost_usd=0.0,
         )
+
+    async def health_check(self) -> None:
+        return None

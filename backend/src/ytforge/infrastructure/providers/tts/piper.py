@@ -9,6 +9,8 @@ from ytforge.application.ports.providers.object_storage import ObjectStorage
 from ytforge.infrastructure.providers.errors import ProviderRequestError
 from ytforge.infrastructure.telemetry.provider_metrics import record_provider_call
 
+_HEALTH_TIMEOUT = httpx.Timeout(connect=3.0, read=5.0, write=3.0, pool=3.0)
+
 
 class PiperProvider:
     """Local Piper TTS server (a small HTTP wrapper around the `piper`
@@ -44,3 +46,14 @@ class PiperProvider:
 
     async def clone_voice(self, req: VoiceCloneRequest) -> ClonedVoice:
         raise NotImplementedError("Piper does not support voice cloning")
+
+    async def health_check(self) -> None:
+        # No documented status endpoint for the wyoming-piper HTTP bridge —
+        # bare-root probe. # verify against your actual server wrapper.
+        try:
+            async with httpx.AsyncClient(base_url=self._base_url, timeout=_HEALTH_TIMEOUT) as client:
+                response = await client.get("/")
+        except httpx.HTTPError as exc:
+            raise ProviderRequestError("piper", f"health check failed: {exc}") from exc
+        if response.status_code >= 400:
+            raise ProviderRequestError("piper", f"HTTP {response.status_code}: {response.text[:200]}")
