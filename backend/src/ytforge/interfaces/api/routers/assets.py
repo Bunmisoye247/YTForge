@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from ytforge.application.common.errors import InvalidStateError, NotFoundError
 from ytforge.application.common.pagination import PageParams
+from ytforge.application.dto.image import ImageRequest
 from ytforge.application.ports.providers import UnitOfWork
 from ytforge.application.ports.providers.object_storage import ObjectStorage
 from ytforge.application.use_cases.assets import (
@@ -17,13 +18,21 @@ from ytforge.application.use_cases.assets import (
     register_asset,
     request_asset_deletion,
 )
-from ytforge.domain.enums import ChannelRole
+from ytforge.domain.enums import AssetType, ChannelRole
+from ytforge.infrastructure.config.settings import get_settings
+from ytforge.infrastructure.providers.errors import AllProvidersExhaustedError
+from ytforge.interfaces.agents.factory import build_agent_context
 from ytforge.interfaces.api.deps.auth import CurrentUser, require_project_role
 from ytforge.interfaces.api.deps.db import get_uow
 from ytforge.interfaces.api.deps.pagination import page_params
 from ytforge.interfaces.api.deps.storage import get_object_storage
 from ytforge.interfaces.api.schemas.approvals import ApprovalRead
-from ytforge.interfaces.api.schemas.assets import AssetRead, AssetRegisterRequest, PresignedUrlRead
+from ytforge.interfaces.api.schemas.assets import (
+    AssetRead,
+    AssetRegisterRequest,
+    ImageGenerateRequest,
+    PresignedUrlRead,
+)
 from ytforge.interfaces.api.schemas.pagination import PageResponse
 
 router = APIRouter(tags=["assets"])
@@ -65,6 +74,56 @@ async def list_(
 ) -> PageResponse[AssetRead]:
     page = await list_assets(uow, project_id, params)
     return PageResponse.from_page(page, AssetRead)
+
+
+@router.post(
+    "/projects/{project_id}/assets/generate-image",
+    response_model=list[AssetRead],
+    status_code=status.HTTP_201_CREATED,
+)
+async def generate_image(
+    project_id: uuid.UUID,
+    data: ImageGenerateRequest,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    _actor: Annotated[object, Depends(require_project_role(ChannelRole.EDITOR))],
+) -> list[AssetRead]:
+    """Freeform prompt -> image, not tied to a storyboard scene (the
+    Images page's "Create images" flow). Unlike
+    storyboards.generate_image (which runs ImageAgent, including its
+    script_writing prompt-refinement step derived from a scene's
+    description), this calls ModelRouter directly with the operator's
+    prompt exactly as typed — there's no scene to derive a prompt from."""
+    settings = get_settings()
+    ctx = build_agent_context(settings, uow)
+    try:
+        images = await ctx.model_router.generate_image(
+            "image_generation",
+            ImageRequest(
+                prompt=data.prompt,
+                model="",
+                negative_prompt=data.negative_prompt,
+                width=data.width,
+                height=data.height,
+            ),
+        )
+    except AllProvidersExhaustedError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+
+    assets = []
+    for image in images:
+        asset = await register_asset(
+            uow,
+            RegisterAssetInput(
+                project_id=project_id,
+                asset_type=AssetType.IMAGE,
+                bucket="raw-assets",
+                object_key=image.object_key,
+                provenance={"model": image.model, "cost_usd": image.cost_usd, "prompt": data.prompt},
+            ),
+        )
+        await mark_asset_ready(uow, asset.id)
+        assets.append(asset)
+    return [AssetRead.model_validate(asset) for asset in assets]
 
 
 @router.get("/assets/{asset_id}/presigned-url", response_model=PresignedUrlRead)

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as assetsApi from "@/lib/api/endpoints/assets";
-import type { AssetRegisterRequest } from "@/lib/api/schemas/assets";
+import type { AssetRegisterRequest, ImageGenerateRequest } from "@/lib/api/schemas/assets";
 import type { PageParams } from "@/lib/api/schemas/pagination";
 import { queryKeys } from "@/lib/api/query-keys";
 
@@ -11,6 +11,14 @@ export function useAssets(projectId: string, params?: PageParams) {
     queryKey: [...queryKeys.assets.list(projectId), params],
     queryFn: () => assetsApi.listAssets(projectId, params),
     enabled: Boolean(projectId),
+  });
+}
+
+export function useGenerateProjectImage(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ImageGenerateRequest) => assetsApi.generateProjectImage(projectId, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.assets.list(projectId) }),
   });
 }
 

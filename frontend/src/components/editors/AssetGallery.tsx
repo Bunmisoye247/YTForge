@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useAssets, useMarkAssetFailed, useMarkAssetReady, useRegisterAsset, useRequestAssetDeletion } from "@/lib/hooks/use-assets";
+import {
+  useAssetPresignedUrl,
+  useAssets,
+  useMarkAssetFailed,
+  useMarkAssetReady,
+  useRegisterAsset,
+  useRequestAssetDeletion,
+} from "@/lib/hooks/use-assets";
 import { useToast } from "@/lib/stores/toast-store";
 import { Card } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/Badge";
@@ -11,6 +18,7 @@ import { Input, Label } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { AssetStatus, AssetType } from "@/types/enums";
 import type { AssetRead } from "@/lib/api/schemas/assets";
+import { titleCase } from "@/lib/utils/format";
 
 type Props = {
   projectId: string;
@@ -119,8 +127,27 @@ function AssetCard({
   onMarkFailed: () => void;
   onRequestDeletion: () => void;
 }) {
+  const isImageLike = asset.asset_type === AssetType.IMAGE || asset.asset_type === AssetType.THUMBNAIL;
+  const { data: presigned } = useAssetPresignedUrl(
+    isImageLike && asset.status === AssetStatus.READY ? asset.id : undefined,
+  );
+
   return (
     <Card>
+      {isImageLike && (
+        <div className="mb-3 flex h-40 items-center justify-center overflow-hidden rounded-md border border-(--color-border) bg-(--color-surface-2) dark:border-(--color-border-dark) dark:bg-(--color-surface-2-dark)">
+          {presigned?.url ? (
+            // Presigned MinIO URLs are dynamic/signed — see SceneTimeline
+            // for the same choice of <img> over next/image.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={presigned.url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-xs text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
+              {asset.status === AssetStatus.READY ? "Loading…" : titleCase(asset.status)}
+            </span>
+          )}
+        </div>
+      )}
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-medium text-(--color-text) dark:text-(--color-text-dark)">{asset.asset_type}</span>
         <StatusBadge status={asset.status} />

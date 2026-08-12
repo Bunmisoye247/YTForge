@@ -159,3 +159,11 @@ export function IconLock(props: IconProps) {
     </svg>
   );
 }
+
+export function IconSparkle(props: IconProps) {
+  return (
+    <svg {...base(props, 1.6)}>
+      <path d="M12 3l1.8 5.6L19 10l-5.2 1.4L12 17l-1.8-5.6L5 10l5.2-1.4L12 3z" />
+    </svg>
+  );
+}

@@ -41,3 +41,10 @@ export type AssetRegisterRequest = {
 
 export const presignedUrlReadSchema = z.object({ url: z.string() });
 export type PresignedUrlRead = z.infer<typeof presignedUrlReadSchema>;
+
+export type ImageGenerateRequest = {
+  prompt: string;
+  negative_prompt?: string | null;
+  width?: number;
+  height?: number;
+};

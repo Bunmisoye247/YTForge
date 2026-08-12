@@ -33,3 +33,10 @@ class AssetRead(BaseModel):
 
 class PresignedUrlRead(BaseModel):
     url: str
+
+
+class ImageGenerateRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=2000)
+    negative_prompt: str | None = None
+    width: int = Field(default=1024, ge=64, le=2048)
+    height: int = Field(default=1024, ge=64, le=2048)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSelectionStore } from "@/lib/stores/selection-store";
+import { CreateImagePanel } from "@/components/editors/CreateImagePanel";
 import { AssetGallery } from "@/components/editors/AssetGallery";
 import { AssetType } from "@/types/enums";
 
@@ -13,7 +14,10 @@ export default function ImagesPage() {
       {!projectId ? (
         <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Select a project.</p>
       ) : (
-        <AssetGallery projectId={projectId} types={[AssetType.IMAGE, AssetType.THUMBNAIL]} />
+        <>
+          <CreateImagePanel projectId={projectId} />
+          <AssetGallery projectId={projectId} types={[AssetType.IMAGE, AssetType.THUMBNAIL]} />
+        </>
       )}
     </div>
   );
