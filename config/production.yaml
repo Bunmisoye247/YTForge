@@ -1,5 +1,13 @@
 app:
   debug: false
+  # Deployed by IP, no domain/TLS yet (deferred) — the frontend origin the
+  # browser actually sends is http://<host>:3000, not localhost, so it
+  # needs to be in the allow-list or every browser-originated API call
+  # (not curl, which isn't CORS-enforced) gets rejected at the preflight.
+  # Update this if/when a real domain + Caddy TLS termination replaces
+  # plain IP access.
+  cors_origins:
+    - http://169.58.94.97:3000
 
 database:
   echo: false
