@@ -68,6 +68,11 @@ class RequestApprovalActivityInput:
 @dataclass(frozen=True, slots=True)
 class RequestApprovalActivityOutput:
     approval_id: str
+    # Set when `pipeline.demo_auto_approve` decided this approval before
+    # the activity even returned — the workflow skips its signal-wait when
+    # this is present rather than blocking on a decision that already
+    # happened. None (the normal path) means the workflow still waits.
+    auto_decided_status: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +103,8 @@ class RequestPublishApprovalActivityInput:
 @dataclass(frozen=True, slots=True)
 class RequestPublishApprovalActivityOutput:
     approval_id: str
+    # See RequestApprovalActivityOutput.auto_decided_status.
+    auto_decided_status: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

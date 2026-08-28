@@ -10,7 +10,12 @@ from temporalio import activity
 from ytforge.application.common.budget_meter import check_budget
 from ytforge.application.common.errors import InvalidStateError, NotFoundError
 from ytforge.application.use_cases.analytics import IngestDailyMetricInput, ingest_daily_metric
-from ytforge.application.use_cases.approvals import RequestApprovalInput, request_approval
+from ytforge.application.use_cases.approvals import (
+    DecideApprovalInput,
+    RequestApprovalInput,
+    decide_approval,
+    request_approval,
+)
 from ytforge.application.use_cases.assets import orphan_asset
 from ytforge.application.use_cases.jobs import (
     RecordJobStartedInput,
@@ -22,7 +27,7 @@ from ytforge.application.use_cases.videos import (
     create_video,
     request_publish_approval,
 )
-from ytforge.domain.enums import ApprovalKind, JobStatus
+from ytforge.domain.enums import ApprovalKind, ApprovalStatus, JobStatus
 from ytforge.infrastructure.config.settings import ModelRoute, Settings, get_settings
 from ytforge.infrastructure.db.session import get_session_factory
 from ytforge.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
@@ -156,20 +161,42 @@ async def emit_event_activity(data: EmitEventActivityInput) -> None:
         await uow.commit()
 
 
+async def _maybe_auto_decide(uow: SqlAlchemyUnitOfWork, approval_id: uuid.UUID, requested_by_user_id: uuid.UUID) -> str | None:
+    """When `pipeline.demo_auto_approve` is on, immediately approves the
+    just-requested approval through the real decide_approval() path (same
+    `approvals` row + `approval.decided` audit log entry a human decision
+    would produce) and returns the resulting status. Returns None (leaving
+    the approval PENDING) when the flag is off — the normal, non-demo path."""
+    if not get_settings().pipeline.demo_auto_approve:
+        return None
+    approval = await decide_approval(
+        uow,
+        approval_id,
+        DecideApprovalInput(
+            status=ApprovalStatus.APPROVED,
+            decided_by_user_id=requested_by_user_id,
+            note="Auto-approved (demo mode: YTFORGE__PIPELINE__DEMO_AUTO_APPROVE)",
+        ),
+    )
+    return approval.status.value
+
+
 @activity.defn(name="request_approval")
 async def request_approval_activity(data: RequestApprovalActivityInput) -> RequestApprovalActivityOutput:
+    requested_by_user_id = uuid.UUID(data.requested_by_user_id)
     uow = SqlAlchemyUnitOfWork(get_session_factory())
     async with uow:
         approval = await request_approval(
             uow,
             RequestApprovalInput(
                 kind=ApprovalKind(data.kind),
-                requested_by_user_id=uuid.UUID(data.requested_by_user_id),
+                requested_by_user_id=requested_by_user_id,
                 payload=data.payload,
                 workflow_id=data.workflow_id,
             ),
         )
-    return RequestApprovalActivityOutput(approval_id=str(approval.id))
+        auto_decided_status = await _maybe_auto_decide(uow, approval.id, requested_by_user_id)
+    return RequestApprovalActivityOutput(approval_id=str(approval.id), auto_decided_status=auto_decided_status)
 
 
 @activity.defn(name="request_publish_approval")
@@ -180,15 +207,15 @@ async def request_publish_approval_activity(
     doesn't take a `workflow_id` param directly — it's stamped on
     afterward here so the API's decision endpoint can still find and
     signal this workflow."""
+    requested_by_user_id = uuid.UUID(data.requested_by_user_id)
     uow = SqlAlchemyUnitOfWork(get_session_factory())
     async with uow:
-        approval = await request_publish_approval(
-            uow, uuid.UUID(data.video_id), uuid.UUID(data.requested_by_user_id)
-        )
+        approval = await request_publish_approval(uow, uuid.UUID(data.video_id), requested_by_user_id)
         approval.workflow_id = data.workflow_id
         await uow.approvals.update(approval)
         await uow.commit()
-    return RequestPublishApprovalActivityOutput(approval_id=str(approval.id))
+        auto_decided_status = await _maybe_auto_decide(uow, approval.id, requested_by_user_id)
+    return RequestPublishApprovalActivityOutput(approval_id=str(approval.id), auto_decided_status=auto_decided_status)
 
 
 @activity.defn(name="orphan_assets")

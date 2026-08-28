@@ -114,6 +114,19 @@ class VideoProductionWorkflow:
         self._pending_approval_id = None
         return self._decisions[approval_id]
 
+    async def _decide_or_wait(self, approval_id: str, auto_decided_status: str | None) -> str:
+        """`auto_decided_status` is set when the request-approval activity
+        already ran the decision through decide_approval() itself (the
+        `pipeline.demo_auto_approve` escape hatch) — in that case the
+        approval is no longer PENDING, so waiting on the signal that would
+        normally carry this decision would hang forever. Recording it into
+        `self._decisions` keeps `pending_approval_id()` and this run's
+        history consistent with the normal signal-driven path."""
+        if auto_decided_status is not None:
+            self._decisions[approval_id] = auto_decided_status
+            return auto_decided_status
+        return await self._wait_for_decision(approval_id)
+
     async def _fail(self, job_id: str, message: str) -> VideoProductionWorkflowOutput:
         if self._created_asset_ids:
             await workflow.execute_activity(
@@ -178,7 +191,7 @@ class VideoProductionWorkflow:
                     start_to_close_timeout=_QUICK_TIMEOUT,
                     result_type=RequestApprovalActivityOutput,
                 )
-                decision = await self._wait_for_decision(approval.approval_id)
+                decision = await self._decide_or_wait(approval.approval_id, approval.auto_decided_status)
                 if decision != "approved":
                     return await self._fail(job_id, "script review rejected")
 
@@ -247,7 +260,7 @@ class VideoProductionWorkflow:
                 start_to_close_timeout=_QUICK_TIMEOUT,
                 result_type=RequestPublishApprovalActivityOutput,
             )
-            decision = await self._wait_for_decision(publish_approval.approval_id)
+            decision = await self._decide_or_wait(publish_approval.approval_id, publish_approval.auto_decided_status)
             if decision != "approved":
                 await workflow.execute_activity(
                     "update_job_status",

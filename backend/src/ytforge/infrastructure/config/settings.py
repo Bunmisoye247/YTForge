@@ -107,6 +107,19 @@ class YouTubeSettings(BaseModel):
     daily_quota_budget: int = 10000
 
 
+class PipelineSettings(BaseModel):
+    # Demo/local-only escape hatch: auto-decides every approval (script
+    # review, publish) as APPROVED the instant it's requested, instead of
+    # waiting on a human via the Temporal signal. The approval still goes
+    # through decide_approval() in full — a real `approvals` row, an
+    # `approval.decided` audit log entry, everything ARCHITECTURE.md's
+    # "human approval gates are mandatory" rule calls for — this only
+    # automates who clicks it. Defaults to False everywhere; must be set
+    # explicitly (YTFORGE__PIPELINE__DEMO_AUTO_APPROVE=true) to take effect,
+    # and should never be true outside a local demo run.
+    demo_auto_approve: bool = False
+
+
 class ObservabilitySettings(BaseModel):
     # Empty = disabled — no OTel Collector runs by default outside the
     # `observability` compose profile (Phase 9), so instrumentation must
@@ -233,6 +246,7 @@ class Settings(BaseSettings):
     google_oauth: GoogleOAuthSettings = GoogleOAuthSettings()
     youtube: YouTubeSettings = YouTubeSettings()
     observability: ObservabilitySettings = ObservabilitySettings()
+    pipeline: PipelineSettings = PipelineSettings()
 
     @classmethod
     def settings_customise_sources(
