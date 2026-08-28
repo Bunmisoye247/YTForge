@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -10,6 +11,8 @@ class EditingSceneInput:
     visual_object_key: str
     voice_object_key: str | None
     duration_seconds: float
+    transcript: str | None = None
+    word_timestamps: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)

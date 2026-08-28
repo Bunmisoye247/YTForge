@@ -39,13 +39,22 @@ def _fake_ffmpeg(monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-de
     return calls
 
 
-def _scene(index: int, visual_key: str, voice_key: str | None = None) -> EditingSceneInput:
+def _scene(
+    index: int,
+    visual_key: str,
+    voice_key: str | None = None,
+    *,
+    transcript: str | None = None,
+    word_timestamps: list[dict[str, object]] | None = None,
+) -> EditingSceneInput:
     return EditingSceneInput(
         scene_id=f"scene-{index}",
         sequence_index=index,
         visual_object_key=visual_key,
         voice_object_key=voice_key,
         duration_seconds=4.0,
+        transcript=transcript,
+        word_timestamps=word_timestamps or [],
     )
 
 
@@ -80,6 +89,70 @@ async def test_render_mixes_music_when_present(_fake_ffmpeg: list[list[str]]) ->
     # scene render + concat + music mix == 3 ffmpeg invocations
     assert len(_fake_ffmpeg) == 3
     assert "amix" in " ".join(_fake_ffmpeg[-1])
+
+
+async def test_render_burns_in_captions_from_word_timestamps(_fake_ffmpeg: list[list[str]]) -> None:
+    storage = FakeObjectStorage()
+    await storage.put_object("raw-assets", "img-0.png", b"image-bytes", "image/png")
+    await storage.put_object("raw-assets", "voice-0.wav", b"voice-bytes", "audio/wav")
+    pipeline = FFmpegEditingPipeline(storage, "raw-assets", "renders")
+
+    scene = _scene(
+        0,
+        "img-0.png",
+        "voice-0.wav",
+        word_timestamps=[
+            {"word": "hello", "start": 0.0, "end": 0.4},
+            {"word": "world", "start": 0.4, "end": 0.9},
+        ],
+    )
+    req = EditingRequest(project_id="proj-captions", scenes=[scene])
+    await pipeline.render(req)
+
+    scene_render_args = _fake_ffmpeg[0]
+    vf_index = scene_render_args.index("-vf")
+    assert "subtitles=" in scene_render_args[vf_index + 1]
+
+
+async def test_render_falls_back_to_transcript_when_no_word_timestamps(_fake_ffmpeg: list[list[str]]) -> None:
+    storage = FakeObjectStorage()
+    await storage.put_object("raw-assets", "img-0.png", b"image-bytes", "image/png")
+    pipeline = FFmpegEditingPipeline(storage, "raw-assets", "renders")
+
+    scene = _scene(0, "img-0.png", transcript="a caption with no timestamps")
+    req = EditingRequest(project_id="proj-transcript", scenes=[scene])
+    await pipeline.render(req)
+
+    scene_render_args = _fake_ffmpeg[0]
+    vf_index = scene_render_args.index("-vf")
+    assert "subtitles=" in scene_render_args[vf_index + 1]
+
+
+async def test_render_skips_captions_when_disabled(_fake_ffmpeg: list[list[str]]) -> None:
+    storage = FakeObjectStorage()
+    await storage.put_object("raw-assets", "img-0.png", b"image-bytes", "image/png")
+    pipeline = FFmpegEditingPipeline(storage, "raw-assets", "renders")
+
+    scene = _scene(0, "img-0.png", transcript="should not be burned in")
+    req = EditingRequest(project_id="proj-no-captions", scenes=[scene], caption_burn_in=False)
+    await pipeline.render(req)
+
+    scene_render_args = _fake_ffmpeg[0]
+    vf_index = scene_render_args.index("-vf")
+    assert "subtitles=" not in scene_render_args[vf_index + 1]
+
+
+async def test_render_skips_captions_when_no_text_available(_fake_ffmpeg: list[list[str]]) -> None:
+    storage = FakeObjectStorage()
+    await storage.put_object("raw-assets", "img-0.png", b"image-bytes", "image/png")
+    pipeline = FFmpegEditingPipeline(storage, "raw-assets", "renders")
+
+    req = EditingRequest(project_id="proj-blank", scenes=[_scene(0, "img-0.png")])
+    await pipeline.render(req)
+
+    scene_render_args = _fake_ffmpeg[0]
+    vf_index = scene_render_args.index("-vf")
+    assert "subtitles=" not in scene_render_args[vf_index + 1]
 
 
 async def test_render_raises_on_nonzero_ffmpeg_exit(monkeypatch: pytest.MonkeyPatch) -> None:

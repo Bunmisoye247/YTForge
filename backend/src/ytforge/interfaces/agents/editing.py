@@ -41,9 +41,11 @@ class EditingAgent:
 
         voiceovers = await ctx.uow.voiceovers.list_for_project(task.project_id)
         voiceover_asset_by_scene = {}
+        voiceover_by_scene = {}
         for voiceover in voiceovers:
             if voiceover.scene_id is None:
                 continue
+            voiceover_by_scene[voiceover.scene_id] = voiceover
             voiceover_asset = await ctx.uow.assets.get_by_id(voiceover.asset_id)
             if voiceover_asset is not None:
                 voiceover_asset_by_scene[voiceover.scene_id] = voiceover_asset
@@ -54,6 +56,7 @@ class EditingAgent:
             if asset is None:
                 continue
             voice_asset = voiceover_asset_by_scene.get(scene.id)
+            scene_voiceover = voiceover_by_scene.get(scene.id)
             scene_inputs.append(
                 EditingSceneInput(
                     scene_id=str(scene.id),
@@ -61,6 +64,8 @@ class EditingAgent:
                     visual_object_key=asset.object_key,
                     voice_object_key=voice_asset.object_key if voice_asset is not None else None,
                     duration_seconds=float(scene.duration_seconds),
+                    transcript=scene_voiceover.transcript if scene_voiceover is not None else None,
+                    word_timestamps=scene_voiceover.word_timestamps if scene_voiceover is not None else [],
                 )
             )
 
