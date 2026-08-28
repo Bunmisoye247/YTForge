@@ -8,12 +8,18 @@ import type {
   ScriptStatusUpdateRequest,
 } from "@/lib/api/schemas/scripts";
 import { queryKeys } from "@/lib/api/query-keys";
+import { usePipelineStatus } from "@/lib/hooks/use-pipeline-status";
 
+/** Polls while a pipeline job is running for this project so a
+ * WriterAgent-generated draft (or a status change) shows up without a
+ * manual reload; stops as soon as the job finishes. */
 export function useScripts(projectId: string) {
+  const { hasActiveJobs } = usePipelineStatus(projectId || undefined);
   return useQuery({
     queryKey: queryKeys.scripts.list(projectId),
     queryFn: () => scriptsApi.listScripts(projectId),
     enabled: Boolean(projectId),
+    refetchInterval: hasActiveJobs ? 5_000 : false,
   });
 }
 

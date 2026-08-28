@@ -30,10 +30,47 @@ function FactCheckList({ scriptId }: { scriptId: string }) {
   );
 }
 
-function ScriptCard({ script, onTransition, isTransitioning }: {
+function ScriptSections({ sections }: { sections: Record<string, unknown> }) {
+  const entries = Object.entries(sections);
+  if (entries.length === 0) {
+    return (
+      <p className="mt-3 text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">Empty draft — no sections yet.</p>
+    );
+  }
+  return (
+    <div className="mt-3 flex flex-col gap-3">
+      {entries.map(([key, value]) => (
+        <div key={key}>
+          <div className="text-xs font-semibold tracking-wide text-(--color-text-muted) uppercase dark:text-(--color-text-muted-dark)">
+            {key}
+          </div>
+          <div className="mt-1 text-sm whitespace-pre-wrap text-(--color-text) dark:text-(--color-text-dark)">
+            {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ScriptCard({
+  script,
+  onTransition,
+  isTransitioning,
+  isEditing,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  isSavingEdit,
+}: {
   script: ScriptRead;
   onTransition: (status: ScriptStatus) => void;
   isTransitioning: boolean;
+  isEditing: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (sections: Record<string, string>) => void;
+  isSavingEdit: boolean;
 }) {
   const next: Partial<Record<ScriptStatus, ScriptStatus[]>> = {
     [ScriptStatus.DRAFT]: [ScriptStatus.IN_REVIEW],
@@ -49,13 +86,31 @@ function ScriptCard({ script, onTransition, isTransitioning }: {
         <StatusBadge status={script.status} />
       </div>
       <FactCheckList scriptId={script.id} />
-      <div className="mt-3 flex gap-2">
-        {options.map((status) => (
-          <Button key={status} size="sm" variant="secondary" isLoading={isTransitioning} onClick={() => onTransition(status)}>
-            {status === ScriptStatus.DRAFT ? "Back to draft" : status}
-          </Button>
-        ))}
-      </div>
+
+      {isEditing ? (
+        <div className="mt-3">
+          <ScriptSectionsEditor initialSections={script.sections} isSaving={isSavingEdit} onSave={onSaveEdit} />
+          <div className="mt-2 flex justify-end">
+            <Button variant="ghost" size="sm" onClick={onCancelEdit}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <ScriptSections sections={script.sections} />
+          <div className="mt-3 flex gap-2">
+            <Button size="sm" variant="secondary" onClick={onStartEdit}>
+              Edit
+            </Button>
+            {options.map((status) => (
+              <Button key={status} size="sm" variant="secondary" isLoading={isTransitioning} onClick={() => onTransition(status)}>
+                {status === ScriptStatus.DRAFT ? "Back to draft" : status}
+              </Button>
+            ))}
+          </div>
+        </>
+      )}
     </Card>
   );
 }
@@ -67,8 +122,22 @@ export default function ScriptsPage() {
   const updateStatus = useUpdateScriptStatus(projectId ?? "");
   const toast = useToast();
   const [showEditor, setShowEditor] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const isEmpty = !isLoading && (scripts?.items.length ?? 0) === 0;
+
+  const handleSaveEdit = (sections: Record<string, string>) => {
+    createVersion.mutate(
+      { sections },
+      {
+        onSuccess: () => {
+          toast.success("New version created from your edits");
+          setEditingId(null);
+        },
+        onError: () => toast.error("Failed to save edits"),
+      },
+    );
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,7 +151,13 @@ export default function ScriptsPage() {
           )}
         </div>
         {projectId && !isEmpty && (
-          <Button className="ml-auto" onClick={() => setShowEditor((v) => !v)}>
+          <Button
+            className="ml-auto"
+            onClick={() => {
+              setEditingId(null);
+              setShowEditor((v) => !v);
+            }}
+          >
             {showEditor ? "Cancel" : "+ Write new version"}
           </Button>
         )}
@@ -137,6 +212,14 @@ export default function ScriptsPage() {
                       { onError: () => toast.error("Status transition failed") },
                     )
                   }
+                  isEditing={editingId === script.id}
+                  onStartEdit={() => {
+                    setShowEditor(false);
+                    setEditingId(script.id);
+                  }}
+                  onCancelEdit={() => setEditingId(null)}
+                  onSaveEdit={handleSaveEdit}
+                  isSavingEdit={createVersion.isPending}
                 />
               ))}
             </div>

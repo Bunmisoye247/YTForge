@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSelectionStore } from "@/lib/stores/selection-store";
 import { useRecordTrend, useTrends } from "@/lib/hooks/use-trends";
+import { useCreateProject } from "@/lib/hooks/use-projects";
+import { useStartPipeline } from "@/lib/hooks/use-pipeline-status";
 import { useToast } from "@/lib/stores/toast-store";
 import { Table, TablePagination, type Column } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
@@ -15,14 +18,21 @@ import type { TrendRead } from "@/lib/api/schemas/trends";
 const SOURCES = Object.values(TrendSource);
 
 export default function IdeasPage() {
-  const { channelId } = useSelectionStore();
+  const { channelId, setProjectId } = useSelectionStore();
+  const router = useRouter();
   const [offset, setOffset] = useState(0);
   const [open, setOpen] = useState(false);
   const [topic, setTopic] = useState("");
   const [source, setSource] = useState<TrendSource>(TrendSource.GOOGLE_TRENDS);
+  const [url, setUrl] = useState("");
+  const [score, setScore] = useState("");
+  const [startingTrend, setStartingTrend] = useState<TrendRead | null>(null);
+  const [projectTitle, setProjectTitle] = useState("");
 
   const { data: page, isLoading } = useTrends(channelId ?? "", { limit: 20, offset });
   const recordTrend = useRecordTrend(channelId ?? "");
+  const createProject = useCreateProject(channelId ?? "");
+  const startPipeline = useStartPipeline();
   const toast = useToast();
 
   if (!channelId) {
@@ -30,12 +40,20 @@ export default function IdeasPage() {
   }
 
   const handleCreate = () => {
+    const parsedScore = Number(score);
     recordTrend.mutate(
-      { topic, source },
+      {
+        topic,
+        source,
+        url: url.trim() ? url.trim() : null,
+        score: score.trim() && !Number.isNaN(parsedScore) ? parsedScore : undefined,
+      },
       {
         onSuccess: () => {
           toast.success("Trend recorded");
           setTopic("");
+          setUrl("");
+          setScore("");
           setOpen(false);
         },
         onError: () => toast.error("Failed to record trend"),
@@ -43,10 +61,53 @@ export default function IdeasPage() {
     );
   };
 
+  const handleStartProject = () => {
+    if (!startingTrend) return;
+    createProject.mutate(
+      { title: projectTitle, trend_id: startingTrend.id },
+      {
+        onSuccess: (project) => {
+          setProjectId(project.id);
+          setStartingTrend(null);
+          router.push("/scripts");
+          startPipeline.mutate(
+            { project_id: project.id, topic: projectTitle },
+            {
+              onSuccess: () => toast.success("Project started — generating script"),
+              onError: () => toast.error("Project created, but script generation failed to start"),
+            },
+          );
+        },
+        onError: () => toast.error("Failed to start project"),
+      },
+    );
+  };
+
+  const rationaleOf = (t: TrendRead) => {
+    const rationale = t.raw_payload?.rationale;
+    return typeof rationale === "string" && rationale.length > 0 ? rationale : null;
+  };
+
   const columns: Column<TrendRead>[] = [
     { header: "Topic", cell: (t) => t.topic },
     { header: "Source", cell: (t) => t.source },
     { header: "Score", cell: (t) => t.score.toFixed(1) },
+    {
+      header: "Why",
+      cell: (t) => {
+        const rationale = rationaleOf(t);
+        return rationale ? (
+          <span
+            title={rationale}
+            className="block max-w-xs truncate text-(--color-text-muted) dark:text-(--color-text-muted-dark)"
+          >
+            {rationale}
+          </span>
+        ) : (
+          <span className="text-(--color-text-muted) dark:text-(--color-text-muted-dark)">—</span>
+        );
+      },
+    },
     {
       header: "Link",
       cell: (t) =>
@@ -56,6 +117,21 @@ export default function IdeasPage() {
           </a>
         ) : null,
     },
+    {
+      header: "",
+      cell: (t) => (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            setStartingTrend(t);
+            setProjectTitle(t.topic);
+          }}
+        >
+          Start project
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -64,7 +140,8 @@ export default function IdeasPage() {
         <div>
           <h1 className="text-xl font-semibold text-(--color-text) dark:text-(--color-text-dark)">Ideas</h1>
           <p className="text-sm text-(--color-text-muted) dark:text-(--color-text-muted-dark)">
-            Manual trend entry — automated discovery lands with the TrendAgent (Phase 6).
+            Ranked by score, highest first. The trend discovery cron scores and records candidates here
+            automatically every day — add one manually below to fast-track it into the ranking.
           </p>
         </div>
         <Button onClick={() => setOpen(true)}>Record trend</Button>
@@ -89,9 +166,44 @@ export default function IdeasPage() {
               ))}
             </Select>
           </div>
+          <div>
+            <Label htmlFor="trend-url">Link (optional)</Label>
+            <Input id="trend-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+          </div>
+          <div>
+            <Label htmlFor="trend-score">Score (optional, 0–100)</Label>
+            <Input
+              id="trend-score"
+              type="number"
+              min={0}
+              max={100}
+              step="0.1"
+              value={score}
+              onChange={(e) => setScore(e.target.value)}
+              placeholder="0.0"
+            />
+          </div>
           <div className="flex justify-end">
             <Button isLoading={recordTrend.isPending} disabled={!topic} onClick={handleCreate}>
               Record
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog open={startingTrend !== null} onClose={() => setStartingTrend(null)} title="Start project from idea">
+        <div className="flex flex-col gap-3">
+          <div>
+            <Label htmlFor="new-project-title">Project title</Label>
+            <Input id="new-project-title" value={projectTitle} onChange={(e) => setProjectTitle(e.target.value)} />
+          </div>
+          <div className="flex justify-end">
+            <Button
+              isLoading={createProject.isPending || startPipeline.isPending}
+              disabled={!projectTitle}
+              onClick={handleStartProject}
+            >
+              Start project
             </Button>
           </div>
         </div>

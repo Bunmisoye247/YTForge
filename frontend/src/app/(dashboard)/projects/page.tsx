@@ -54,6 +54,15 @@ export default function ProjectsPage() {
   const columns: Column<ProjectRead>[] = [
     { header: "Title", cell: (p) => p.title },
     { header: "Status", cell: (p) => <StatusBadge status={p.status} /> },
+    {
+      header: "Origin",
+      cell: (p) =>
+        p.trend_id ? (
+          <span className="text-(--color-text-muted) dark:text-(--color-text-muted-dark)">From idea</span>
+        ) : (
+          <span className="text-(--color-text-muted) dark:text-(--color-text-muted-dark)">—</span>
+        ),
+    },
     { header: "Budget", cell: (p) => formatMoney(p.budget_usd) },
     {
       header: "",

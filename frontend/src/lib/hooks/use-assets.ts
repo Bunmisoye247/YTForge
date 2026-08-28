@@ -5,12 +5,17 @@ import * as assetsApi from "@/lib/api/endpoints/assets";
 import type { AssetRegisterRequest, ImageGenerateRequest } from "@/lib/api/schemas/assets";
 import type { PageParams } from "@/lib/api/schemas/pagination";
 import { queryKeys } from "@/lib/api/query-keys";
+import { usePipelineStatus } from "@/lib/hooks/use-pipeline-status";
 
+/** Polls while a pipeline job is running for this project — see
+ * useScripts. */
 export function useAssets(projectId: string, params?: PageParams) {
+  const { hasActiveJobs } = usePipelineStatus(projectId || undefined);
   return useQuery({
     queryKey: [...queryKeys.assets.list(projectId), params],
     queryFn: () => assetsApi.listAssets(projectId, params),
     enabled: Boolean(projectId),
+    refetchInterval: hasActiveJobs ? 5_000 : false,
   });
 }
 

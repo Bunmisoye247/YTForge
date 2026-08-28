@@ -1,8 +1,18 @@
 import { apiClient } from "@/lib/api/client";
 import { pageResponseSchema, pageParamsToSearch, type PageParams, type PageResponse } from "@/lib/api/schemas/pagination";
-import { jobReadSchema, type JobRead } from "@/lib/api/schemas/pipelines";
+import {
+  jobReadSchema,
+  startPipelineResponseSchema,
+  type JobRead,
+  type StartPipelineRequest,
+  type StartPipelineResponse,
+} from "@/lib/api/schemas/pipelines";
 
 const jobPageSchema = pageResponseSchema(jobReadSchema);
+
+export function startPipeline(data: StartPipelineRequest): Promise<StartPipelineResponse> {
+  return apiClient.post("/pipelines", startPipelineResponseSchema, data);
+}
 
 export function listJobs(
   params?: PageParams & { project_id?: string },

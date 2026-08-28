@@ -4,12 +4,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as storyboardsApi from "@/lib/api/endpoints/storyboards";
 import type { SceneCreateRequest, StoryboardStatusUpdateRequest } from "@/lib/api/schemas/storyboards";
 import { queryKeys } from "@/lib/api/query-keys";
+import { usePipelineStatus } from "@/lib/hooks/use-pipeline-status";
 
+/** Polls while a pipeline job is running for this project — see
+ * useScripts. */
 export function useStoryboard(projectId: string) {
+  const { hasActiveJobs } = usePipelineStatus(projectId || undefined);
   return useQuery({
     queryKey: queryKeys.storyboards.detail(projectId),
     queryFn: () => storyboardsApi.getStoryboardForProject(projectId),
     enabled: Boolean(projectId),
+    refetchInterval: hasActiveJobs ? 5_000 : false,
   });
 }
 

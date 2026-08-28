@@ -5,12 +5,17 @@ import * as videosApi from "@/lib/api/endpoints/videos";
 import type { SeoMetadataSetRequest, VideoCreateRequest, VideoUpdateRequest } from "@/lib/api/schemas/videos";
 import type { PageParams } from "@/lib/api/schemas/pagination";
 import { queryKeys } from "@/lib/api/query-keys";
+import { usePipelineStatus } from "@/lib/hooks/use-pipeline-status";
 
+/** Polls while a pipeline job is running for this project — see
+ * useScripts. */
 export function useVideos(projectId: string, params?: PageParams) {
+  const { hasActiveJobs } = usePipelineStatus(projectId || undefined);
   return useQuery({
     queryKey: [...queryKeys.videos.list(projectId), params],
     queryFn: () => videosApi.listVideos(projectId, params),
     enabled: Boolean(projectId),
+    refetchInterval: hasActiveJobs ? 5_000 : false,
   });
 }
 

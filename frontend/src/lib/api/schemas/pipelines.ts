@@ -23,3 +23,14 @@ export const jobReadSchema = z.object({
   error: z.string().nullable(),
 });
 export type JobRead = z.infer<typeof jobReadSchema>;
+
+export const startPipelineResponseSchema = z.object({
+  workflow_id: z.string(),
+  run_id: z.string(),
+});
+export type StartPipelineResponse = z.infer<typeof startPipelineResponseSchema>;
+
+export interface StartPipelineRequest {
+  project_id: string;
+  topic: string;
+}
